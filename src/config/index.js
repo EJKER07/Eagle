@@ -5,8 +5,8 @@ const root = path.resolve(__dirname, "../..");
 module.exports = {
   brand: {
     name: "Falcon Premium",
-    color: 0x8b5cf6,
-    colors: { success: 0x22c55e, error: 0xef4444, warning: 0xf59e0b, neutral: 0x8b5cf6 },
+    color: 0xf4df1b,
+    colors: { success: 0xf4df1b, error: 0xed4245, warning: 0xf4df1b, neutral: 0xf4df1b },
   },
   prefix: process.env.BOT_PREFIX || "$",
   ticket: {

@@ -1,13 +1,13 @@
 const { EmbedBuilder, Colors } = require("discord.js");
 
 const palette = {
-  success: Colors.Green,
+  success: 0xf4df1b,
   error: Colors.Red,
   warning: Colors.Yellow,
-  security: Colors.Blurple,
-  moderation: Colors.Orange,
-  info: Colors.Blurple,
-  afk: Colors.Purple,
+  security: 0xf4df1b,
+  moderation: 0xf4df1b,
+  info: 0xf4df1b,
+  afk: 0xf4df1b,
 };
 
 const icons = {
@@ -23,8 +23,8 @@ const icons = {
 function createEmbed({ type = "info", title = "FirstLight", description = "", fields = [], footer = "FirstLight", timestamp = true } = {}) {
   const embed = new EmbedBuilder()
     .setColor(palette[type] || palette.info)
-    .setTitle(`${icons[type] || icons.info} ${title}`)
-    .setFooter({ text: footer });
+    .setTitle(title)
+    .setFooter({ text: `${footer} • server tools` });
 
   if (typeof description === "string" && description.trim().length > 0) {
     embed.setDescription(description);

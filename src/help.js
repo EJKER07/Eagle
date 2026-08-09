@@ -8,14 +8,18 @@ const categories = Object.freeze({
   Planned: { description: 'Systems reserved for upcoming feature phases.', commands: [] }
 });
 
+function themedEmbed(title, description) {
+  return new EmbedBuilder().setTitle(title).setDescription(description).setColor(0xf4df1b).setFooter({ text: 'Falcon Premium • server tools' });
+}
+
 function homeEmbed() {
-  return new EmbedBuilder().setTitle('FirstLight Help').setDescription('Choose a category to explore available commands.').setColor(0x7c3aed);
+  return themedEmbed('FirstLight Help', 'Choose a category to explore available commands.');
 }
 
 function categoryEmbed(name, commands) {
   const category = categories[name];
   const lines = commands.length ? commands.map(command => `• \`/${command}\``).join('\n') : 'No commands are enabled in this category yet.';
-  return new EmbedBuilder().setTitle(`${name} commands`).setDescription(`${category.description}\n\n${lines}`).setColor(0x7c3aed);
+  return themedEmbed(`${name} commands`, `${category.description}\n\n${lines}`);
 }
 
 function components() {

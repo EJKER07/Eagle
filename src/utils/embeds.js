@@ -2,41 +2,41 @@ const { EmbedBuilder, Colors } = require("discord.js");
 const config = require("../config/index");
 
 const embedColors = {
-  success: Colors.Green,
-  error: Colors.Red,
-  warning: Colors.Yellow,
-  security: Colors.Blurple,
-  moderation: Colors.Orange,
-  info: Colors.Blurple,
-  ticket: Colors.Purple,
-  economy: Colors.Gold,
-  leveling: Colors.Green,
-  giveaway: Colors.Gold,
+  success: 0xf4df1b,
+  error: 0xed4245,
+  warning: 0xf4df1b,
+  security: 0xf4df1b,
+  moderation: 0xf4df1b,
+  info: 0xf4df1b,
+  ticket: 0xf4df1b,
+  economy: 0xf4df1b,
+  leveling: 0xf4df1b,
+  giveaway: 0xf4df1b,
 };
 
 function embed(type, title, description, fields = []) {
   return new EmbedBuilder()
     .setColor(embedColors[type] || embedColors.info)
-    .setTitle(`${config.emojis[type] || config.emojis.utility} ${title}`)
+    .setTitle(title)
     .setDescription(description || null)
-    .addFields(fields)
-    .setFooter({ text: config.brand.name })
+    .addFields(fields.map((field) => ({ ...field, name: field.name.trim(), value: String(field.value).trim() })))
+    .setFooter({ text: `${config.brand.name} • server tools` })
     .setTimestamp();
 }
 
 function baseEmbed() {
   return new EmbedBuilder()
-    .setColor(config.brand.color)
+    .setColor(0xf4df1b)
     .setTimestamp()
-    .setFooter({ text: config.brand.name });
+    .setFooter({ text: `${config.brand.name} • server tools` });
 }
 
 function errorEmbed(message) {
-  return baseEmbed().setColor(config.brand.colors.error).setDescription(`${config.emojis.error} ${message}`);
+  return baseEmbed().setColor(embedColors.error).setDescription(message);
 }
 
 function successEmbed(message) {
-  return baseEmbed().setColor(config.brand.colors.success).setDescription(`${config.emojis.success} ${message}`);
+  return baseEmbed().setDescription(message);
 }
 
 module.exports = { embed, baseEmbed, errorEmbed, successEmbed };
