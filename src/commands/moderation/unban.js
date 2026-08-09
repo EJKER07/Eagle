@@ -1,0 +1,6 @@
+const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+module.exports = {
+  data: new SlashCommandBuilder().setName('unban').setDescription('Unban a user.').setDefaultMemberPermissions(PermissionFlagsBits.BanMembers.toString()).addUserOption(o => o.setName('user').setDescription('User to unban').setRequired(true)).addStringOption(o => o.setName('reason').setDescription('Reason')),
+  permissions: ['BanMembers'],
+  async execute(interaction, context) { const user = interaction.options.getUser('user', true); const reason = interaction.options.getString('reason') || 'No reason provided'; if (!interaction.guild.members.me.permissions.has(PermissionFlagsBits.BanMembers)) return interaction.reply({ content: 'I need the Ban Members permission.', ephemeral: true }); try { await interaction.guild.members.unban(user, reason); const entry = context.database.addCase(interaction.guildId, { action: 'unban', targetId: user.id, targetTag: user.tag, moderatorId: interaction.user.id, reason }); await context.log(interaction.guild, 'moderation', { title: `unban | Case ${entry.id}`, description: `${user.tag}\n${reason}` }); await interaction.reply(`${user.tag} was unbanned.`); } catch (error) { if (error.code === 10026) return interaction.reply({ content: 'That user is not banned.', ephemeral: true }); throw error; } }
+};

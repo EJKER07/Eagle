@@ -1,0 +1,1 @@
+module.exports = { ...require("../../services/communityCommands").createCommand("clearvoice"), aliases: ["resetvoice"] };

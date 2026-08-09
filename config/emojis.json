@@ -1,0 +1,14 @@
+{
+  "success": "✅",
+  "error": "❌",
+  "warning": "⚠️",
+  "loading": "⏳",
+  "moderation": "⚔️",
+  "security": "🛡️",
+  "music": "🎵",
+  "ticket": "🎫",
+  "giveaway": "🎉",
+  "economy": "💰",
+  "leveling": "📈",
+  "utility": "🛠️"
+}
