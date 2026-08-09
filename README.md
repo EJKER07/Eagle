@@ -45,7 +45,7 @@ copy .env.example .env
 
 Set `DISCORD_TOKEN` and `CLIENT_ID` in `.env`. Use `DEV_GUILD_ID` for fast development deployment; omit it for global production deployment. Enable the `Guild Members`, `Message Content`, and `Guild Moderation` privileged intents in the Discord Developer Portal. Invite attribution also requires the bot to have permission to manage/view invites.
 
-Set `BOT_OWNER_ID` to your Discord user ID for owner-only tools. `$botinvite client_id <bot application ID>` generates an OAuth2 install link privately for the owner; Discord still requires the user to authorize the bot and have permission to add it to a server.
+Set `BOT_OWNER_ID` to your Discord user ID for owner-only tools. `$bi client_id <bot application ID>` generates an OAuth2 install link privately for the owner; Discord still requires the user to authorize the bot and have permission to add it to a server. Bot information remains available through `$botinfo` and `$about`.
 
 ## Community analytics and MongoDB
 

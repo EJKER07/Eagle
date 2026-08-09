@@ -1,1 +1,1 @@
-module.exports = { ...require("../../services/communityCommands").createCommand("botinfo"), aliases: ["bi", "about"] };
+module.exports = { ...require("../../services/communityCommands").createCommand("botinfo"), aliases: ["about"] };

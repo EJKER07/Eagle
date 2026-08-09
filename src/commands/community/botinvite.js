@@ -2,7 +2,7 @@ const { SlashCommandBuilder } = require("discord.js");
 
 module.exports = {
   data: new SlashCommandBuilder()
-    .setName("botinvite")
+    .setName("bi")
     .setDescription("Owner-only: create an OAuth2 install link for a bot application.")
     .addStringOption((option) => option.setName("client_id").setDescription("Target bot application ID").setRequired(true))
     .addStringOption((option) => option.setName("permissions").setDescription("Discord permission integer, default 0")),
