@@ -19,9 +19,9 @@ function formatDuration(ms) {
 function activeEmbed(giveaway, reactionEmoji = "🎉", prizeEmoji = "🎁", announcementEmoji = "🎉") {
   const remainingMs = giveaway.endsAt - Date.now();
   const remainingText = remainingMs > 0 ? `in ${formatDuration(remainingMs)}` : "ending now";
-  const card = embed("giveaway", `${announcementEmoji} New Giveaway ${announcementEmoji}`, `${prizeEmoji} **${giveaway.prize}**\n\n• Winners: **${giveaway.winnerCount}**\n• Ends in: ${remainingText}\n• Hosted by: <@${giveaway.hostId}>\n\n• React with ${reactionEmoji} to participate!`)
-    .setFooter({ text: `Ends at • ${new Date(giveaway.endsAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}` })
-    .setTimestamp(giveaway.endsAt);
+  const endTime = new Date(giveaway.endsAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" });
+  const card = embed("giveaway", `${announcementEmoji} New Giveaway ${announcementEmoji}`, `${prizeEmoji} **${giveaway.prize}**\n\n• Winners: **${giveaway.winnerCount}**\n• Ends in: ${remainingText}\n• Hosted by: <@${giveaway.hostId}>\n• Ends: **${endTime}**\n\n• React with ${reactionEmoji} to participate!`)
+    .setTimestamp(new Date(giveaway.endsAt));
   if (giveaway.hostAvatarUrl) card.setThumbnail(giveaway.hostAvatarUrl);
   return card;
 }
