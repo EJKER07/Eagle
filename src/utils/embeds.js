@@ -21,7 +21,7 @@ function embed(type, title, description, fields = []) {
     .setDescription(description || null)
     .addFields(fields.map((field) => ({ ...field, name: field.name.trim(), value: String(field.value).trim() })))
     .setFooter({ text: `${config.brand.name} • server tools` })
-    .setTimestamp();
+    .setTimestamp(type === "giveaway" ? null : undefined);
 }
 
 function baseEmbed() {
