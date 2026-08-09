@@ -3,7 +3,13 @@ const { embed } = require("../../utils/embeds");
 const { runPrefixCommand } = require("../../services/prefixCommandService");
 const { metric } = require("../../services/communityService");
 
+function shouldReactToEnter(content) {
+  const normalized = String(content || "").trim().toLowerCase();
+  return Boolean(normalized && /\b(enter|entry|entering|press enter|hit enter|submit|send|join)\b/.test(normalized));
+}
+
 module.exports = {
+  shouldReactToEnter,
   name: Events.MessageCreate,
   once: false,
   async execute(client, message) {
@@ -21,6 +27,9 @@ module.exports = {
       await metric(client, message.guild.id, message.author.id, "messages");
       const day = new Date().toISOString().slice(0, 10);
       await metric(client, message.guild.id, `${message.author.id}:${day}`, "messages");
+    }
+    if (shouldReactToEnter(message.content)) {
+      await message.react("✅").catch(() => {});
     }
     const prefix = client.db.getGuildSettings(message.guild.id).prefix || client.config.prefix;
     if (message.content.startsWith(prefix)) {
