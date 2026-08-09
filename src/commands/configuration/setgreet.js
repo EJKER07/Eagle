@@ -13,6 +13,6 @@ module.exports = {
     const message = interaction.options.getString("message") || "Welcome {mention} to **{server}**!";
     const deleteAfter = interaction.options.getInteger("delete_after") ?? 1;
     client.db.updateGuildSettings(interaction.guildId, (settings) => ({ ...settings, welcome: { ...settings.welcome, enabled: true, channelId: channel.id, message, deleteAfter } }));
-    await interaction.reply({ embeds: [embed("success", "Welcome configured", `Messages will be sent in ${channel}.`)] });
+    await interaction.reply({ embeds: [embed("success", "Welcome configured", `Messages will be sent in ${channel}. Use /testgreet to preview it or /disablegreet to turn it off.`)] });
   },
 };
