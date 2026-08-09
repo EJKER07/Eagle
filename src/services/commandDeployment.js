@@ -7,6 +7,7 @@ const slashPriority = [
   "ban", "kick", "timeout", "untimeout", "warn", "warnings", "clear", "lock", "unlock",
   "poll", "giveaway", "play", "queue", "skip", "stop", "balance", "daily", "rank",
   "invites", "messages", "lb", "vc", "gstart", "gend", "greroll", "setprefix",
+  "prefixcommands",
 ];
 
 function selectSlashCommands(commands, limit = MAX_SLASH_COMMANDS) {

@@ -168,6 +168,13 @@ async function execute(interaction, client, name) {
     if (name === "snipe") { await interaction.reply({ embeds: [embed("info", "Snipe", "No deleted message is currently cached.")] }); return; }
     if (name === "list") { await interaction.reply({ embeds: [embed("info", "Server list", interaction.guild.channels.cache.map((channel) => `${channel} (${channel.type})`).join("\n").slice(0, 4000) || "No channels found.")] }); return; }
     if (name === "deleteemoji") { const value = interaction.options.getString("emoji", true); const emojiId = value.match(/<a?:[^:]+:(\d+)>/)?.[1] || (/^\d+$/.test(value) ? value : null); if (!emojiId) throw new Error("Provide a custom emoji mention or numeric emoji ID."); const emoji = await interaction.guild.emojis.fetch(emojiId).catch(() => null); if (!emoji) throw new Error("That emoji was not found in this server."); await emoji.delete(`Deleted by ${interaction.user.tag}`); await interaction.reply({ embeds: [embed("success", "Emoji deleted", `Deleted **${emoji.name}**.`)] }); return; }
+    if (["prefixcommands", "prefixlist"].includes(name)) {
+      const { selectSlashCommands } = require("./commandDeployment");
+      const { skipped } = selectSlashCommands(client.commands);
+      const names = skipped.map((command) => `$${command.data.name}`).join(", ");
+      await interaction.reply({ embeds: [embed("info", "Prefix-only commands", names || "All loaded commands are currently available as slash commands.", [{ name: "Usage", value: "Use the `$` prefix before any command shown above." }])] });
+      return;
+    }
     if (name === "clone") { const clone = await interaction.channel.clone({ reason: `Cloned by ${interaction.user.tag}` }); await interaction.reply({ embeds: [embed("success", "Channel cloned", `Created ${clone}.`)] }); return; }
     if (name === "hide") { await interaction.channel.permissionOverwrites.edit(interaction.guild.roles.everyone, { ViewChannel: false }); await interaction.reply({ embeds: [embed("moderation", "Channel hidden", "The channel is hidden from @everyone.")] }); return; }
     if (["hideall", "lockall", "unlockall"].includes(name)) { const channels = interaction.guild.channels.cache.filter((channel) => channel.isTextBased()); for (const channel of channels.values()) { if (name === "hideall") await channel.permissionOverwrites.edit(interaction.guild.roles.everyone, { ViewChannel: false }).catch(() => {}); else await channel.permissionOverwrites.edit(interaction.guild.roles.everyone, { SendMessages: name === "unlockall" ? null : false }).catch(() => {}); } await interaction.reply({ embeds: [embed("moderation", name, `Processed **${channels.size}** channel(s).`)] }); return; }
