@@ -19,7 +19,7 @@ const guildDefaults = {
   goodbye: { enabled: false, channelId: null, message: "Goodbye **{username}**." },
   tickets: { enabled: false, categoryId: null, staffRoleId: null, staffRoleIds: [], logChannelId: null },
   antinuke: {
-    enabled: false, punishment: "timeout", windowMs: 10000,
+    enabled: false, punishment: "clear_roles", windowMs: 10000, roleSnapshot: null,
     whitelistUsers: [], limits: { channelDelete: 3, roleDelete: 3, ban: 3 },
   },
   leveling: { enabled: false, xpPerMessage: 10, cooldownMs: 60000 },

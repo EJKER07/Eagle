@@ -25,7 +25,11 @@ module.exports = {
     if (values.length < limit) return;
     const member = await guild.members.fetch(entry.executorId).catch(() => null);
     if (!member || !member.manageable) return;
-    if (settings.punishment === "ban" && member.bannable) await member.ban({ reason: `FirstLight Anti-Nuke: ${key} threshold exceeded` });
+    if (settings.punishment === "clear_roles") {
+      const roleIds = member.roles.cache.filter((role) => role.id !== guild.id && !role.managed).map((role) => role.id);
+      client.db.updateGuildSettings(guild.id, (current) => ({ ...current, antinuke: { ...current.antinuke, roleSnapshot: { userId: member.id, roleIds, capturedAt: Date.now() } } }));
+      await member.roles.set([], `FirstLight Anti-Nuke: ${key} threshold exceeded`);
+    } else if (settings.punishment === "ban" && member.bannable) await member.ban({ reason: `FirstLight Anti-Nuke: ${key} threshold exceeded` });
     else if (settings.punishment === "kick" && member.kickable) await member.kick(`FirstLight Anti-Nuke: ${key} threshold exceeded`);
     else if (member.moderatable) await member.timeout(24 * 60 * 60 * 1000, `FirstLight Anti-Nuke: ${key} threshold exceeded`);
     const channelId = client.db.getGuildSettings(guild.id).logging.security;
