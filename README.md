@@ -71,6 +71,8 @@ Commands are synchronized once after the client becomes ready. For an explicit d
 npm run deploy
 ```
 
+Discord permits 100 top-level slash commands per application scope. The bot keeps the full command set available through the configured prefix (default `$`) and deploys the prioritized core commands as slash commands; startup logs list any prefix-only commands.
+
 For container hosts, deploy from the repository root so the included `Dockerfile` is used. It copies the runtime `src/` tree into `/app/src` and starts the bot with `node src/index.js`. The `.dockerignore` excludes local secrets, logs, tests, and dependencies while retaining application code.
 
 Never commit `.env`, `database/firstlight.json`, or bot tokens. If a token was previously exposed, revoke it in the Discord Developer Portal before using the bot.
