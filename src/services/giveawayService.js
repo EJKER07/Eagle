@@ -3,16 +3,15 @@ const { embed } = require("../utils/embeds");
 
 function giveawayComponents(id, ended = false) {
   return [new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`giveaway:join:${id}`).setLabel(ended ? "Giveaway ended" : "Enter giveaway").setStyle(ended ? ButtonStyle.Secondary : ButtonStyle.Success).setDisabled(ended),
+    new ButtonBuilder().setCustomId(`giveaway:join:${id}`).setEmoji("🎉").setLabel(ended ? "Giveaway ended" : "Enter giveaway").setStyle(ended ? ButtonStyle.Secondary : ButtonStyle.Success).setDisabled(ended),
   )];
 }
 
 function activeEmbed(giveaway) {
-  return embed("giveaway", "Giveaway", `Prize: **${giveaway.prize}**\nReact with the button below to enter.`, [
-    { name: "Winners", value: String(giveaway.winnerCount), inline: true },
-    { name: "Ends", value: `<t:${Math.floor(giveaway.endsAt / 1000)}:R>`, inline: true },
-    { name: "Hosted by", value: `<@${giveaway.hostId}>`, inline: true },
-  ]);
+  const card = embed("giveaway", "🎉 New Giveaway 🎉", `🎁 **${giveaway.prize}**\n\n• Winners: **${giveaway.winnerCount}**\n• Ends in: <t:${Math.floor(giveaway.endsAt / 1000)}:R>\n• Hosted by: <@${giveaway.hostId}>\n\n• React with 🎉 to participate!`)
+    .setFooter({ text: `Ends at • ${new Date(giveaway.endsAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}` });
+  if (giveaway.hostAvatarUrl) card.setThumbnail(giveaway.hostAvatarUrl);
+  return card;
 }
 
 function endedEmbed(giveaway, winners) {
