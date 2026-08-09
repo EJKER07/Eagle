@@ -22,7 +22,7 @@ if (!token) {
       GatewayIntentBits.GuildModeration,
       GatewayIntentBits.GuildBans,
     ],
-    partials: [Partials.Channel, Partials.GuildMember, Partials.Message],
+    partials: [Partials.Channel, Partials.GuildMember, Partials.Message, Partials.MessageReaction, Partials.User],
   });
 
   client.commands = new Collection();
