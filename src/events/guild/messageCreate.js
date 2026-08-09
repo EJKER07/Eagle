@@ -8,8 +8,28 @@ function shouldReactToEnter(content) {
   return Boolean(normalized && /\b(enter|entry|entering|press enter|hit enter|submit|send|join)\b/.test(normalized));
 }
 
+function isGiveawayEntryMessage(content) {
+  const normalized = String(content || "").trim().toLowerCase();
+  return /^(?:enter|join)(?:\s+giveaway)?$/i.test(normalized);
+}
+
+async function processGiveawayEntry(client, message) {
+  if (!isGiveawayEntryMessage(message.content)) return false;
+  const giveaway = client.db.getGiveaways(message.guild.id).find((item) => item.channelId === message.channel.id && !item.ended && item.endsAt > Date.now());
+  if (!giveaway) return false;
+  if (giveaway.entries.includes(message.author.id)) {
+    await message.react("✅").catch(() => {});
+    return true;
+  }
+  giveaway.entries.push(message.author.id);
+  client.db.saveGiveaway(message.guild.id, giveaway);
+  await message.react("🎉").catch(() => {});
+  return true;
+}
+
 module.exports = {
   shouldReactToEnter,
+  isGiveawayEntryMessage,
   name: Events.MessageCreate,
   once: false,
   async execute(client, message) {
@@ -28,6 +48,7 @@ module.exports = {
       const day = new Date().toISOString().slice(0, 10);
       await metric(client, message.guild.id, `${message.author.id}:${day}`, "messages");
     }
+    if (await processGiveawayEntry(client, message)) return;
     if (shouldReactToEnter(message.content)) {
       await message.react("✅").catch(() => {});
     }
