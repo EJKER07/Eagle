@@ -1,5 +1,6 @@
 const { SlashCommandBuilder, PermissionFlagsBits, ChannelType } = require("discord.js");
 const { embed } = require("../../utils/embeds");
+const { parseDuration } = require("../../utils/duration");
 const { activeEmbed, giveawayComponents, finishGiveaway, scheduleGiveaway } = require("../../services/giveawayService");
 
 module.exports = {
@@ -7,7 +8,7 @@ module.exports = {
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addSubcommand((sub) => sub.setName("create").setDescription("Create a giveaway.")
       .addStringOption((option) => option.setName("prize").setDescription("What people can win").setRequired(true))
-      .addIntegerOption((option) => option.setName("duration").setDescription("Duration in seconds").setMinValue(10).setMaxValue(2592000).setRequired(true))
+      .addStringOption((option) => option.setName("duration").setDescription("Examples: 1s, 1m, 1h, 1d, 1w").setRequired(true))
       .addIntegerOption((option) => option.setName("winners").setDescription("Number of winners").setMinValue(1).setMaxValue(20).setRequired(false))
       .addChannelOption((option) => option.setName("channel").setDescription("Giveaway channel").addChannelTypes(ChannelType.GuildText).setRequired(false)))
     .addSubcommand((sub) => sub.setName("end").setDescription("End a giveaway immediately.").addStringOption((option) => option.setName("id").setDescription("Giveaway message ID").setRequired(true)))
@@ -19,7 +20,8 @@ module.exports = {
     const id = interaction.options.getString("id");
     if (action === "create") {
       const channel = interaction.options.getChannel("channel") || interaction.channel;
-      const giveaway = { id: `${interaction.guildId}-${Date.now()}`, guildId: interaction.guildId, channelId: channel.id, messageId: null, hostId: interaction.user.id, prize: interaction.options.getString("prize", true), winnerCount: interaction.options.getInteger("winners") || 1, endsAt: Date.now() + interaction.options.getInteger("duration", true) * 1000, entries: [], ended: false };
+      const duration = parseDuration(interaction.options.getString("duration", true));
+      const giveaway = { id: `${interaction.guildId}-${Date.now()}`, guildId: interaction.guildId, channelId: channel.id, messageId: null, hostId: interaction.user.id, prize: interaction.options.getString("prize", true), winnerCount: interaction.options.getInteger("winners") || 1, endsAt: Date.now() + duration * 1000, entries: [], ended: false };
       const message = await channel.send({ embeds: [activeEmbed(giveaway)], components: giveawayComponents(giveaway.id) });
       giveaway.messageId = message.id;
       client.db.saveGiveaway(interaction.guildId, giveaway);
