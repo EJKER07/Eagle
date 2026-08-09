@@ -31,8 +31,8 @@ module.exports = {
         .setThumbnail(interaction.user.displayAvatarURL({ size: 256 }));
       if (client.config.ticket.imageUrl) ticketEmbed.setImage(client.config.ticket.imageUrl);
       const ticketButtons = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId("ticket:claim").setLabel("Claim Ticket").setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId("ticket:close").setLabel("Close Ticket").setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId("ticket:claim").setLabel("Claim Ticket").setStyle(ButtonStyle.Primary).setEmoji("🎟️"),
+        new ButtonBuilder().setCustomId("ticket:close").setLabel("Close Ticket").setStyle(ButtonStyle.Danger).setEmoji("🔒"),
       );
       await channel.send({ content: `${interaction.user}${staffRoleIds.map((id) => ` <@&${id}>`).join("")}`, embeds: [ticketEmbed], components: [ticketButtons], allowedMentions: { users: [interaction.user.id], roles: staffRoleIds } });
       await interaction.reply({ embeds: [embed("success", "Ticket created", `Your private ticket is ${channel}.`)], ephemeral: true });
@@ -49,7 +49,7 @@ module.exports = {
       }
       if (interaction.customId === "ticket:close") {
         await interaction.channel.permissionOverwrites.edit(interaction.channel.topic?.match(/ticket-owner:(\d+)/)?.[1] || interaction.user.id, { SendMessages: false });
-        return interaction.update({ embeds: [embed("warning", "Ticket closed", "This ticket is now read-only.")], components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("ticket:reopen").setLabel("Reopen").setStyle(ButtonStyle.Success), new ButtonBuilder().setCustomId("ticket:delete").setLabel("Delete").setStyle(ButtonStyle.Danger))] });
+        return interaction.update({ embeds: [embed("warning", "Ticket closed", "This ticket is now read-only.")], components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("ticket:reopen").setLabel("Reopen").setStyle(ButtonStyle.Success).setEmoji("🔓"), new ButtonBuilder().setCustomId("ticket:delete").setLabel("Delete").setStyle(ButtonStyle.Danger).setEmoji("🗑️"))] });
       }
       if (interaction.customId === "ticket:reopen") {
         const ownerId = interaction.channel.topic?.match(/ticket-owner:(\d+)/)?.[1];
