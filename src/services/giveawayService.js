@@ -19,8 +19,8 @@ function formatDuration(ms) {
 function activeEmbed(giveaway, reactionEmoji = "🎉", prizeEmoji = "🎁", announcementEmoji = "🎉") {
   const remainingMs = giveaway.endsAt - Date.now();
   const remainingText = remainingMs > 0 ? formatDuration(remainingMs) : "ending now";
-  const endTime = new Date(giveaway.endsAt).toLocaleString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true });
-  const card = embed("giveaway", `${announcementEmoji} New Giveaway ${announcementEmoji}`, `${prizeEmoji} **${giveaway.prize}**\n\n• Winners: **${giveaway.winnerCount}**\n• Ends: **${endTime}** (in ${remainingText})\n• Hosted by: <@${giveaway.hostId}>\n\n• React with ${reactionEmoji} to participate!`)
+  const unixTimestamp = Math.floor(giveaway.endsAt / 1000);
+  const card = embed("giveaway", `${announcementEmoji} New Giveaway ${announcementEmoji}`, `${prizeEmoji} **${giveaway.prize}**\n\n• Winners: **${giveaway.winnerCount}**\n• Ends: <t:${unixTimestamp}:F> (in ${remainingText})\n• Hosted by: <@${giveaway.hostId}>\n\n• React with ${reactionEmoji} to participate!`)
     .setTimestamp(new Date(giveaway.endsAt));
   if (giveaway.hostAvatarUrl) card.setThumbnail(giveaway.hostAvatarUrl);
   return card;
