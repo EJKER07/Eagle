@@ -18,6 +18,7 @@ if (!token) {
       GatewayIntentBits.GuildMembers,
       GatewayIntentBits.GuildMessages,
       GatewayIntentBits.MessageContent,
+      GatewayIntentBits.GuildMessageReactions,
       GatewayIntentBits.GuildVoiceStates,
       GatewayIntentBits.GuildModeration,
       GatewayIntentBits.GuildBans,
