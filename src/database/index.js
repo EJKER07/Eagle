@@ -24,7 +24,10 @@ const guildDefaults = {
   },
   leveling: { enabled: false, xpPerMessage: 10, cooldownMs: 60000 },
   moderation: { escalation: {} },
-  automod: { enabled: false },
+  automod: {
+    enabled: false,
+    blacklistWords: ["fuck", "shit", "bitch", "asshole", "dick", "piss", "chutiya", "gandu", "harami", "kamina", "kutta", "bakwass", "madarchod", "bhenchod"],
+  },
   giveaways: [],
   invites: { joinChannelId: null, leaveChannelId: null, joinMessage: "Welcome {mention} to **{server}**!", leaveMessage: "Goodbye **{username}**.", tracked: {} },
   metrics: { blacklistedChannelIds: [] },

@@ -9,6 +9,14 @@ module.exports = {
   async execute(client, message) {
     if (!message.guild || message.author.bot) return;
     const settings = client.db.getGuildSettings(message.guild.id);
+    if (settings.automod.enabled) {
+      const content = message.content.toLocaleLowerCase();
+      const blocked = (settings.automod.blacklistWords || []).find((word) => new RegExp(`(?:^|\\s)${word.replace(/[.*+?^${}()|[\\]\\]/g, "\\\\$&")}(?:$|\\s)`, "iu").test(content));
+      if (blocked) {
+        await message.delete().catch(() => {});
+        return;
+      }
+    }
     if (!settings.metrics.blacklistedChannelIds.includes(message.channel.id)) {
       await metric(client, message.guild.id, message.author.id, "messages");
       const day = new Date().toISOString().slice(0, 10);

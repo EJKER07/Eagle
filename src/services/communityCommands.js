@@ -39,6 +39,37 @@ function commandData(name) {
   if (name === "deletesticker") return builder.setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild).addStringOption((o) => o.setName("sticker").setDescription("Sticker ID").setRequired(true));
   if (name === "enlarge") return builder.addStringOption((o) => o.setName("emoji").setDescription("Custom emoji mention").setRequired(true));
   if (name === "audit") return builder.setDefaultMemberPermissions(PermissionFlagsBits.ViewAuditLog).addIntegerOption((o) => o.setName("limit").setDescription("Number of entries").setMinValue(1).setMaxValue(20));
+  if (name === "emergency") return builder.setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
+    .addSubcommand((sub) => sub.setName("role").setDescription("Configure the emergency role."))
+    .addSubcommand((sub) => sub.setName("authorise").setDescription("Authorise the emergency system."))
+    .addSubcommand((sub) => sub.setName("emergency-situation").setDescription("Activate emergency protection."))
+    .addSubcommand((sub) => sub.setName("restore").setDescription("Restore emergency settings."));
+  if (name === "voice") return builder.setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+    .addSubcommand((sub) => sub.setName("enable").setDescription("Enable this feature."))
+    .addSubcommand((sub) => sub.setName("disable").setDescription("Disable this feature."))
+    .addSubcommand((sub) => sub.setName("config").setDescription("View or edit configuration."))
+    .addSubcommand((sub) => sub.setName("banrole").setDescription("Ban a role from voice channels."))
+    .addSubcommand((sub) => sub.setName("ban").setDescription("Ban a user from voice channels."))
+    .addSubcommand((sub) => sub.setName("unban").setDescription("Remove a voice ban."))
+    .addSubcommand((sub) => sub.setName("banlist").setDescription("List voice bans."))
+    .addSubcommand((sub) => sub.setName("resetban").setDescription("Reset voice bans."));
+  if (name === "antibetray") return builder.setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+    .addSubcommand((sub) => sub.setName("enable").setDescription("Enable Anti-Betray."))
+    .addSubcommand((sub) => sub.setName("disable").setDescription("Disable Anti-Betray."))
+    .addSubcommand((sub) => sub.setName("config").setDescription("View Anti-Betray configuration."));
+  if (name === "autorole") return builder.setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles)
+    .addSubcommand((sub) => sub.setName("bot").setDescription("Configure the bot autorole."))
+    .addSubcommand((sub) => sub.setName("human").setDescription("Configure the human autorole."))
+    .addSubcommand((sub) => sub.setName("showbot").setDescription("Show the bot autorole."))
+    .addSubcommand((sub) => sub.setName("showhuman").setDescription("Show the human autorole."))
+    .addSubcommand((sub) => sub.setName("remove").setDescription("Remove an autorole."))
+    .addSubcommand((sub) => sub.setName("reset").setDescription("Reset autorole settings."));
+  if (name === "secure") return builder.setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
+    .addSubcommandGroup((group) => group.setName("channel").setDescription("Secure channel protection.").addSubcommand((sub) => sub.setName("enable").setDescription("Enable secure channel protection.")));
+  if (name === "role") return builder.setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles).addSubcommand((sub) => sub.setName("all").setDescription("Add a role to all members.").addRoleOption((o) => o.setName("role").setDescription("Role to assign").setRequired(true)));
+  if (["greetsetup", "greetreset", "greetchannel", "greetedit", "greetconfig", "greetautodelete"].includes(name)) return builder.setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild).addChannelOption((o) => o.setName("channel").setDescription("Greeting channel"));
+  if (["ignore", "extraowner", "whitelist", "unwhitelist", "whitelisted", "banrole", "ban", "unban", "banlist", "resetban"].includes(name)) return builder.setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild).addUserOption((o) => o.setName("user").setDescription("User")).addRoleOption((o) => o.setName("role").setDescription("Role"));
+  if (["ship", "mydog", "translate", "howgay", "lesbian", "cute", "intelligence", "chutiya", "horny", "tharki", "gif", "iplookup", "weather", "hug", "kiss", "pat", "cuddle", "slap", "tickle", "spank", "ngif", "8ball", "truth", "dare", "autoresponder", "autoreact", "boycott", "limit", "blacklistword", "imagine"].includes(name)) return builder.addStringOption((o) => o.setName("text").setDescription("Text or target").setRequired(name !== "truth" && name !== "dare"));
   if (name === "invitecode") return builder.addStringOption((o) => o.setName("code").setDescription("Invite code").setRequired(true));
   return builder;
 }
