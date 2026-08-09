@@ -7,6 +7,7 @@ module.exports = {
   async execute(interaction, client) {
     const groups = {};
     for (const command of client.commands.values()) {
+      if (command.hidden) continue;
       const group = command.category || "Utility";
       (groups[group] ||= []).push(`\`/${command.data.name}\` — ${command.data.description}`);
     }

@@ -11,7 +11,7 @@ const slashPriority = [
 ];
 
 function selectSlashCommands(commands, limit = MAX_SLASH_COMMANDS) {
-  const values = [...commands.values()];
+  const values = [...commands.values()].filter((command) => command.slashDeploy !== false);
   const byName = new Map(values.map((command) => [command.data.name, command]));
   const selected = [];
   for (const name of slashPriority) {

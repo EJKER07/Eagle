@@ -9,6 +9,7 @@ module.exports = {
     colors: { success: 0xf4df1b, error: 0xed4245, warning: 0xf4df1b, neutral: 0xf4df1b },
   },
   prefix: process.env.BOT_PREFIX || "$",
+  ownerId: process.env.BOT_OWNER_ID || process.env.OWNER_ID || null,
   ticket: {
     imageUrl: process.env.TICKET_IMAGE_URL || null,
     panelImageUrl: process.env.TICKET_PANEL_IMAGE_URL || "https://cdn.discordapp.com/attachments/1535593621158363206/1535617681703829565/eagle.png?ex=6a786ae9&is=6a771969&hm=4df5c6b3a8f9cb5cbfe13cad61c2820789a9a5e2987bfc8d71b9a7f2466138ed&",
