@@ -9,7 +9,7 @@ const database = require("./database");
 const token = config.deployment.token;
 
 if (!token) {
-  console.error("DISCORD_TOKEN or TOKEN is missing. Add one to .env before starting Falcon Premium.");
+  console.error("DISCORD_TOKEN or TOKEN is missing. Add one to .env before starting Eagle Premium.");
   process.exitCode = 1;
 } else {
   const client = new Client({

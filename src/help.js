@@ -1,7 +1,7 @@
 const { ActionRowBuilder, StringSelectMenuBuilder, EmbedBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 const categories = Object.freeze({
-  General: { description: 'Everyday FirstLight commands.', commands: ['help', 'ping'] },
+  General: { description: 'Everyday Eagle Premium commands.', commands: ['help', 'ping'] },
   Configuration: { description: 'Guild administration and preferences.', commands: ['config', 'setlog', 'welcome', 'stealemoji'] },
   Moderation: { description: 'Tools for keeping your server safe.', commands: ['ban', 'unban', 'kick', 'timeout', 'untimeout', 'warn', 'warnings', 'clear', 'slowmode', 'lock', 'unlock', 'softban', 'nick'] },
   Community: { description: 'Member experience tools.', commands: ['afk', 'giveaway'] },
@@ -9,11 +9,11 @@ const categories = Object.freeze({
 });
 
 function themedEmbed(title, description) {
-  return new EmbedBuilder().setTitle(title).setDescription(description).setColor(0xf4df1b).setFooter({ text: 'Falcon Premium • server tools' });
+  return new EmbedBuilder().setTitle(title).setDescription(description).setColor(0xf4df1b).setFooter({ text: 'Eagle Premium • server tools' });
 }
 
 function homeEmbed() {
-  return themedEmbed('FirstLight Help', 'Choose a category to explore available commands.');
+  return themedEmbed('Eagle Premium Help', 'Choose a category to explore available commands.');
 }
 
 function categoryEmbed(name, commands) {

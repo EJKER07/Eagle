@@ -28,10 +28,10 @@ module.exports = {
     if (settings.punishment === "clear_roles") {
       const roleIds = member.roles.cache.filter((role) => role.id !== guild.id && !role.managed).map((role) => role.id);
       client.db.updateGuildSettings(guild.id, (current) => ({ ...current, antinuke: { ...current.antinuke, roleSnapshot: { userId: member.id, roleIds, capturedAt: Date.now() } } }));
-      await member.roles.set([], `FirstLight Anti-Nuke: ${key} threshold exceeded`);
-    } else if (settings.punishment === "ban" && member.bannable) await member.ban({ reason: `FirstLight Anti-Nuke: ${key} threshold exceeded` });
-    else if (settings.punishment === "kick" && member.kickable) await member.kick(`FirstLight Anti-Nuke: ${key} threshold exceeded`);
-    else if (member.moderatable) await member.timeout(24 * 60 * 60 * 1000, `FirstLight Anti-Nuke: ${key} threshold exceeded`);
+      await member.roles.set([], `Eagle Premium Anti-Nuke: ${key} threshold exceeded`);
+    } else if (settings.punishment === "ban" && member.bannable) await member.ban({ reason: `Eagle Premium Anti-Nuke: ${key} threshold exceeded` });
+    else if (settings.punishment === "kick" && member.kickable) await member.kick(`Eagle Premium Anti-Nuke: ${key} threshold exceeded`);
+    else if (member.moderatable) await member.timeout(24 * 60 * 60 * 1000, `Eagle Premium Anti-Nuke: ${key} threshold exceeded`);
     const channelId = client.db.getGuildSettings(guild.id).logging.security;
     const channel = channelId ? guild.channels.cache.get(channelId) : null;
     if (channel?.isTextBased()) await channel.send({ embeds: [embed("security", "Anti-Nuke action", `${member.user.tag} exceeded the **${key}** limit and was punished.`)] });
