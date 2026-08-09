@@ -5,8 +5,8 @@ function giveawayComponents(id, ended = false) {
   return [];
 }
 
-function activeEmbed(giveaway, reactionEmoji = "🎉") {
-  const card = embed("giveaway", "🎉 New Giveaway 🎉", `🎁 **${giveaway.prize}**\n\n• Winners: **${giveaway.winnerCount}**\n• Ends in: <t:${Math.floor(giveaway.endsAt / 1000)}:R>\n• Hosted by: <@${giveaway.hostId}>\n\n• React with ${reactionEmoji} to participate!`)
+function activeEmbed(giveaway, reactionEmoji = "🎉", prizeEmoji = "🎁", announcementEmoji = "🎉") {
+  const card = embed("giveaway", `${announcementEmoji} New Giveaway ${announcementEmoji}`, `${prizeEmoji} **${giveaway.prize}**\n\n• Winners: **${giveaway.winnerCount}**\n• Ends in: <t:${Math.floor(giveaway.endsAt / 1000)}:R>\n• Hosted by: <@${giveaway.hostId}>\n\n• React with ${reactionEmoji} to participate!`)
     .setFooter({ text: `Ends at • ${new Date(giveaway.endsAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}` });
   if (giveaway.hostAvatarUrl) card.setThumbnail(giveaway.hostAvatarUrl);
   return card;

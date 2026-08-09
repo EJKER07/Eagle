@@ -22,8 +22,11 @@ module.exports = {
       const channel = interaction.options.getChannel("channel") || interaction.channel;
       const duration = parseDuration(interaction.options.getString("duration", true));
       const giveaway = { id: `${interaction.guildId}-${Date.now()}`, guildId: interaction.guildId, channelId: channel.id, messageId: null, hostId: interaction.user.id, hostAvatarUrl: interaction.user.displayAvatarURL({ size: 256 }), prize: interaction.options.getString("prize", true), winnerCount: interaction.options.getInteger("winners") || 1, endsAt: Date.now() + duration * 1000, entries: [], ended: false };
-      const reactionEmoji = interaction.guild?.emojis.cache.find((item) => item.name === "Fire_money") || "🎉";
-      const message = await channel.send({ embeds: [activeEmbed(giveaway, reactionEmoji)], components: giveawayComponents(giveaway.id) });
+      const customEmoji = interaction.guild?.emojis.cache.find((item) => item.name === "Fire_money");
+      const prizeEmoji = interaction.guild?.emojis.cache.find((item) => item.name === "coleader") || "🎁";
+      const reactionEmoji = customEmoji || "🎉";
+      const announcementEmoji = interaction.guild?.emojis.cache.find((item) => item.name === "ANNOUNCE") || "🎉";
+      const message = await channel.send({ embeds: [activeEmbed(giveaway, reactionEmoji, prizeEmoji, announcementEmoji)], components: giveawayComponents(giveaway.id) });
       await message.react(reactionEmoji).catch(() => {});
       giveaway.messageId = message.id;
       client.db.saveGiveaway(interaction.guildId, giveaway);
