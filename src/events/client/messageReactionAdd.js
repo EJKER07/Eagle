@@ -12,8 +12,11 @@ module.exports = {
         return;
       }
     }
-    if (reaction.emoji.name !== "🎉") return;
     const message = reaction.message;
+    if (!message.guild) return;
+    const reactionName = reaction.emoji.id ? reaction.emoji.name : reaction.emoji.name;
+    const validEmoji = reaction.emoji.id ? reaction.emoji.name === "Fire_money" : reaction.emoji.name === "🎉";
+    if (!validEmoji) return;
     if (message.partial) {
       try {
         await message.fetch();

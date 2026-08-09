@@ -70,19 +70,6 @@ module.exports = {
       client.db.setAfkDmOnMention(interaction.guildId, ownerId, !current.dmOnMention);
       await interaction.reply({ content: `Mention DMs ${current.dmOnMention ? "disabled" : "enabled"}.`, ephemeral: true });
     }
-    if (interaction.isButton() && interaction.customId.startsWith("giveaway:join:")) {
-      const giveawayId = interaction.customId.split(":")[2];
-      const giveaway = client.db.getGiveaways(interaction.guildId).find((item) => item.id === giveawayId);
-      if (!giveaway || giveaway.ended || giveaway.endsAt <= Date.now()) {
-        return interaction.reply({ embeds: [embed("warning", "Giveaway ended", "This giveaway is no longer accepting entries.")], ephemeral: true });
-      }
-      if (giveaway.entries.includes(interaction.user.id)) {
-        return interaction.reply({ embeds: [embed("info", "Already entered", "You are already entered in this giveaway.")], ephemeral: true });
-      }
-      giveaway.entries.push(interaction.user.id);
-      client.db.saveGiveaway(interaction.guildId, giveaway);
-      await interaction.reply({ embeds: [embed("success", "Entry added", "You are now entered in the giveaway.")], ephemeral: true });
-    }
     if (interaction.isButton() && interaction.customId.startsWith("poll:")) {
       await interaction.reply({ embeds: [embed("success", "Vote recorded", "Your vote has been recorded.")], ephemeral: true });
     }

@@ -2,13 +2,11 @@ const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 const { embed } = require("../utils/embeds");
 
 function giveawayComponents(id, ended = false) {
-  return [new ActionRowBuilder().addComponents(
-    new ButtonBuilder().setCustomId(`giveaway:join:${id}`).setEmoji("🎉").setLabel(ended ? "Giveaway ended" : "Enter giveaway").setStyle(ended ? ButtonStyle.Secondary : ButtonStyle.Success).setDisabled(ended),
-  )];
+  return [];
 }
 
-function activeEmbed(giveaway) {
-  const card = embed("giveaway", "🎉 New Giveaway 🎉", `🎁 **${giveaway.prize}**\n\n• Winners: **${giveaway.winnerCount}**\n• Ends in: <t:${Math.floor(giveaway.endsAt / 1000)}:R>\n• Hosted by: <@${giveaway.hostId}>\n\n• React with 🎉 to participate!`)
+function activeEmbed(giveaway, reactionEmoji = "🎉") {
+  const card = embed("giveaway", "🎉 New Giveaway 🎉", `🎁 **${giveaway.prize}**\n\n• Winners: **${giveaway.winnerCount}**\n• Ends in: <t:${Math.floor(giveaway.endsAt / 1000)}:R>\n• Hosted by: <@${giveaway.hostId}>\n\n• React with ${reactionEmoji} to participate!`)
     .setFooter({ text: `Ends at • ${new Date(giveaway.endsAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}` });
   if (giveaway.hostAvatarUrl) card.setThumbnail(giveaway.hostAvatarUrl);
   return card;
