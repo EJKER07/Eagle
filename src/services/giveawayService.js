@@ -5,8 +5,21 @@ function giveawayComponents(id, ended = false) {
   return [];
 }
 
+function formatDuration(ms) {
+  const seconds = Math.max(0, Math.ceil(ms / 1000));
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ${seconds % 60}s`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ${minutes % 60}m`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ${hours % 24}h`;
+}
+
 function activeEmbed(giveaway, reactionEmoji = "🎉", prizeEmoji = "🎁", announcementEmoji = "🎉") {
-  const card = embed("giveaway", `${announcementEmoji} New Giveaway ${announcementEmoji}`, `${prizeEmoji} **${giveaway.prize}**\n\n• Winners: **${giveaway.winnerCount}**\n• Ends in: <t:${Math.floor(giveaway.endsAt / 1000)}:R>\n• Hosted by: <@${giveaway.hostId}>\n\n• React with ${reactionEmoji} to participate!`)
+  const remainingMs = giveaway.endsAt - Date.now();
+  const remainingText = remainingMs > 0 ? `in ${formatDuration(remainingMs)}` : "ending now";
+  const card = embed("giveaway", `${announcementEmoji} New Giveaway ${announcementEmoji}`, `${prizeEmoji} **${giveaway.prize}**\n\n• Winners: **${giveaway.winnerCount}**\n• Ends in: ${remainingText}\n• Hosted by: <@${giveaway.hostId}>\n\n• React with ${reactionEmoji} to participate!`)
     .setFooter({ text: `Ends at • ${new Date(giveaway.endsAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })}` });
   if (giveaway.hostAvatarUrl) card.setThumbnail(giveaway.hostAvatarUrl);
   return card;
