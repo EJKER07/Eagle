@@ -1,6 +1,6 @@
 const { Events } = require("discord.js");
 const { embed } = require("../../utils/embeds");
-const { findUsedInvite, metric, sendMemberMessage } = require("../../services/communityService");
+const { findUsedInvite, metric, sendMemberMessage, render } = require("../../services/communityService");
 
 module.exports = {
   name: Events.GuildMemberAdd,
@@ -19,7 +19,11 @@ module.exports = {
     const channel = member.guild.channels.cache.get(settings.channelId);
     if (!channel?.isTextBased()) return;
     const message = render(settings.message, member, channel);
-    const sent = await channel.send({ content: message, embeds: [embed("success", "Welcome", message)] });
-    if (settings.deleteAfter > 0) setTimeout(() => sent.delete().catch(() => {}), settings.deleteAfter * 1000);
+    const sent = await channel.send({
+      content: message,
+      embeds: [embed("success", "Welcome", message)],
+      allowedMentions: { users: [member.id] },
+    });
+    if (settings.deleteAfter >= 0) setTimeout(() => sent.delete().catch(() => {}), Math.min(settings.deleteAfter, 1) * 1000);
   },
 };
