@@ -5,6 +5,7 @@ const config = require("./config/index");
 const { loadCommands } = require("./handlers/command-handler");
 const { loadEvents } = require("./handlers/event-handler");
 const database = require("./database");
+const CommandDataStore = require("./services/commandDataStore");
 const VoiceConnectionManager = require("./services/voiceConnectionManager");
 const AudioStreamMonitor = require("./services/audioStreamMonitor");
 
@@ -33,6 +34,7 @@ if (!token) {
   client.config = config;
   client.db = database;
   client.database = database;
+  client.dataStore = new CommandDataStore(database);
   client.startedAt = Date.now();
 
   loadCommands(client, config.paths.commands);

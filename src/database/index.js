@@ -32,6 +32,7 @@ const guildDefaults = {
   invites: { joinChannelId: null, leaveChannelId: null, joinMessage: "Welcome {mention} to **{server}**!", leaveMessage: "Goodbye **{username}**.", tracked: {} },
   metrics: { blacklistedChannelIds: [] },
   members: { afk: {}, levels: {}, economy: {}, warnings: [] },
+  commands: {},
 };
 
 function clone(value) {
