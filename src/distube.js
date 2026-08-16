@@ -16,11 +16,11 @@ module.exports = (client) => {
             path: ffmpeg
         },
         plugins: [
+            new YouTubePlugin(),
+            new SpotifyPlugin(),
             new YtDlpPlugin({
                 update: false
-            }),
-            new YouTubePlugin(),
-            new SpotifyPlugin()
+            })
         ]
     });
 
@@ -44,12 +44,14 @@ module.exports = (client) => {
 
     // Queue Created
     distube.on("initQueue", (queue) => {
-        console.log(`✅ Queue created for guild: ${queue.guild?.name}`);
+        const guildName = queue.guild?.name || queue.textChannel?.guild?.name || "unknown";
+        console.log(`✅ Queue created for guild: ${guildName}`);
     });
 
     // No Song
     distube.on("noSong", (queue) => {
-        console.log(`⚠️ Queue ended: no more songs in ${queue.guild?.name}`);
+        const guildName = queue.guild?.name || queue.textChannel?.guild?.name || "unknown";
+        console.log(`⚠️ Queue ended: no more songs in ${guildName}`);
     });
 
     // Queue End Event
@@ -67,20 +69,30 @@ module.exports = (client) => {
         console.log(`➕ Song added: ${song.name}`);
     });
 
-    // Error Events
+    // Error Events - Better logging
     distube.on("error", (channel, e) => {
-        const error = String(e.message || e);
-        console.error("❌ DisTube Error:", error);
+        // Get proper error message
+        let errorMsg = "Unknown error";
+        if (e instanceof Error) {
+            errorMsg = e.message || String(e);
+        } else if (typeof e === "object") {
+            errorMsg = JSON.stringify(e, null, 2);
+        } else {
+            errorMsg = String(e);
+        }
+        
+        console.error("❌ DisTube Error:", errorMsg);
+        console.error("Stack:", e?.stack || "No stack trace");
         
         // Provide helpful diagnostics
-        if (error.includes("Cannot connect") || error.includes("timeout")) {
+        if (errorMsg.includes("Cannot connect") || errorMsg.includes("timeout")) {
             console.error("⚠️  VOICE CONNECTION ISSUE:");
             console.error("   - Check bot has CONNECT & SPEAK permissions");
             console.error("   - Check voice channel is not full");
             console.error("   - Restart bot if permissions were just added");
         }
         
-        if (error.includes("bot") || error.includes("captcha")) {
+        if (errorMsg.includes("bot") || errorMsg.includes("captcha")) {
             console.error("⚠️  YOUTUBE BOT DETECTION:");
             console.error("   - Try searching by name instead of URL");
             console.error("   - Use Spotify links if available");
@@ -88,7 +100,7 @@ module.exports = (client) => {
         }
 
         if (channel?.send) {
-            const msg = error.length > 100 ? error.slice(0, 97) + "..." : error;
+            const msg = errorMsg.length > 100 ? errorMsg.slice(0, 97) + "..." : errorMsg;
             channel.send(`⚠️ **Music Error**\n\`\`\`\n${msg}\n\`\`\``).catch(() => {});
         }
     });
