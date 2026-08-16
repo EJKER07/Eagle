@@ -11,7 +11,7 @@ module.exports = {
   prefix: process.env.BOT_PREFIX || "$",
   ownerId: process.env.BOT_OWNER_ID || process.env.OWNER_ID || "1496490310589481030",
   ticket: {
-    imageUrl: process.env.TICKET_IMAGE_URL || "https://cdn.discordapp.com/attachments/1536749083912306690/1538405479590531162/eagle.png?ex=6a828f40&is=6a813dc0&hm=0c74e9ab9a3da10f3c614ed2d08008c36cf472606041377e7d276a1e7b640e8e&",
+    imageUrl: process.env.TICKET_IMAGE_URL || "https://i.ibb.co/BVsB4CS4/382ad2dd02dd701a813c189ec01be1d3.jpg",
     panelImageUrl: process.env.TICKET_PANEL_IMAGE_URL || "https://cdn.discordapp.com/attachments/1536749083912306690/1538405479590531162/eagle.png?ex=6a828f40&is=6a813dc0&hm=0c74e9ab9a3da10f3c614ed2d08008c36cf472606041377e7d276a1e7b640e8e&",
   },
   paths: {

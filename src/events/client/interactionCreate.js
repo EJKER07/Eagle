@@ -1,4 +1,4 @@
-const { Events, ChannelType, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
+const { Events, ChannelType, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require("discord.js");
 const { executeInteraction } = require("../../services/interactionService");
 const { embed } = require("../../utils/embeds");
 const { createTranscript } = require("discord-html-transcripts");
@@ -27,9 +27,23 @@ module.exports = {
       const channel = await interaction.guild.channels.create({ name: `ticket-${interaction.user.username}`.toLowerCase().replace(/[^a-z0-9-]/g, "-").slice(0, 90), type: ChannelType.GuildText, topic: `ticket-owner:${interaction.user.id}`, parent: settings.categoryId || undefined, permissionOverwrites: overwrites });
       const staffRoleIds = settings.staffRoleIds?.length ? settings.staffRoleIds : (settings.staffRoleId ? [settings.staffRoleId] : []);
       const categoryName = interaction.values[0].replace(/-/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-      const ticketEmbed = embed("ticket", `${categoryName} Ticket`, `**Welcome** ${interaction.user}\n**Category:** ${categoryName}\n\nOur support team will assist you shortly.`)
-        .setThumbnail(interaction.user.displayAvatarURL({ size: 256 }));
-      if (client.config.ticket.imageUrl) ticketEmbed.setImage(client.config.ticket.imageUrl);
+      const ticketImageUrl = client.config.ticket.imageUrl || "https://i.ibb.co/BVsB4CS4/382ad2dd02dd701a813c189ec01be1d3.jpg";
+      const ticketEmbed = new EmbedBuilder()
+        .setColor(0xf4df1b)
+        .setTitle(`${categoryName} Ticket`)
+        .setDescription(`**Welcome** ${interaction.user}\n**Category:** ${categoryName}\n\nOur support team will assist you shortly.`)
+        .setThumbnail(interaction.user.displayAvatarURL({ size: 256 }))
+        .setImage(ticketImageUrl)
+        .setFooter({ text: "Eagle Premium • server tools" })
+        .setTimestamp();
+
+      ticketEmbed.data.color = 0xf4df1b;
+      ticketEmbed.data.author = { name: "Eagle Premium", icon_url: "https://cdn.discordapp.com/attachments/1536749083912306690/1538405479590531162/eagle.png?ex=6a828f40&is=6a813dc0&hm=0c74e9ab9a3da10f3c614ed2d08008c36cf472606041377e7d276a1e7b640e8e&" };
+      ticketEmbed.data.title = `${categoryName} Ticket`;
+      ticketEmbed.data.description = `**Welcome** ${interaction.user}\n**Category:** ${categoryName}\n\nOur support team will assist you shortly.`;
+      ticketEmbed.data.thumbnail = { url: interaction.user.displayAvatarURL({ size: 256 }) };
+      ticketEmbed.data.image = { url: ticketImageUrl };
+      ticketEmbed.data.footer = { text: "Eagle Premium • server tools" };
       const ticketButtons = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId("ticket:claim").setLabel("Claim Ticket").setStyle(ButtonStyle.Primary).setEmoji("🎟️"),
         new ButtonBuilder().setCustomId("ticket:close").setLabel("Close Ticket").setStyle(ButtonStyle.Danger).setEmoji("🔒"),
