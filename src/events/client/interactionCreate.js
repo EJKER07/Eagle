@@ -13,47 +13,50 @@ module.exports = {
       return;
     }
     if (interaction.isStringSelectMenu() && interaction.customId === "ticket:create") {
-      const settings = client.db.getGuildSettings(interaction.guildId).tickets;
-      if (!settings.enabled) throw new Error("Tickets are disabled in this server.");
-      const existing = interaction.guild.channels.cache.find((channel) => channel.topic === `ticket-owner:${interaction.user.id}`);
-      if (existing) return interaction.reply({ embeds: [embed("warning", "Ticket already open", `You already have ${existing}.`)], ephemeral: true });
-      const overwrites = [
-        { id: interaction.guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
-        { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
-      ];
-      for (const roleId of settings.staffRoleIds?.length ? settings.staffRoleIds : [settings.staffRoleId]) {
-        if (roleId) overwrites.push({ id: roleId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] });
+      try {
+        await interaction.deferReply({ ephemeral: true });
+        const settings = client.db.getGuildSettings(interaction.guildId).tickets;
+        if (!settings.enabled) {
+          return interaction.editReply({ embeds: [embed("error", "Tickets disabled", "Tickets are disabled in this server.")] });
+        }
+        const existing = interaction.guild.channels.cache.find((channel) => channel.topic === `ticket-owner:${interaction.user.id}`);
+        if (existing) {
+          return interaction.editReply({ embeds: [embed("warning", "Ticket already open", `You already have ${existing}.`)] });
+        }
+        const overwrites = [
+          { id: interaction.guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
+          { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
+        ];
+        const staffRoleIds = settings.staffRoleIds?.length ? settings.staffRoleIds : (settings.staffRoleId ? [settings.staffRoleId] : []);
+        for (const roleId of staffRoleIds) {
+          if (roleId) overwrites.push({ id: roleId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] });
+        }
+        const selectedValue = interaction.values[0];
+        const categoryName = selectedValue.replace(/-/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+        const ticketTypeSlug = selectedValue.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        const usernameSlug = interaction.user.username.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "user";
+        const channelName = `${ticketTypeSlug}-${usernameSlug}`.slice(0, 90);
+        const channel = await interaction.guild.channels.create({ name: channelName, type: ChannelType.GuildText, topic: `ticket-owner:${interaction.user.id}`, parent: settings.categoryId || undefined, permissionOverwrites: overwrites });
+        const ticketImageUrl = client.config.ticket.imageUrl || "https://i.ibb.co/BVsB4CS4/382ad2dd02dd701a813c189ec01be1d3.jpg";
+        const ticketEmbed = new EmbedBuilder()
+          .setColor(0xf4df1b)
+          .setAuthor({ name: "Eagle Premium", iconURL: "https://cdn.discordapp.com/attachments/1536749083912306690/1538405479590531162/eagle.png?ex=6a828f40&is=6a813dc0&hm=0c74e9ab9a3da10f3c614ed2d08008c36cf472606041377e7d276a1e7b640e8e&" })
+          .setTitle(`${categoryName.toUpperCase()} TICKET`)
+          .setDescription(`**Welcome** ${interaction.user}\n**Category:** ${categoryName}\n\nOur support team will assist you shortly.`)
+          .setThumbnail(interaction.user.displayAvatarURL({ size: 256 }))
+          .setImage(ticketImageUrl)
+          .setFooter({ text: "Eagle Premium • server tools" })
+          .setTimestamp();
+        const ticketButtons = new ActionRowBuilder().addComponents(
+          new ButtonBuilder().setCustomId("ticket:claim").setLabel("Claim Ticket").setStyle(ButtonStyle.Primary).setEmoji("🎟️"),
+          new ButtonBuilder().setCustomId("ticket:close").setLabel("Close Ticket").setStyle(ButtonStyle.Danger).setEmoji("🔒"),
+        );
+        await channel.send({ content: `${interaction.user}${staffRoleIds.map((id) => ` <@&${id}>`).join("")}`, embeds: [ticketEmbed], components: [ticketButtons], allowedMentions: { users: [interaction.user.id], roles: staffRoleIds } });
+        await interaction.editReply({ embeds: [embed("success", "Ticket created", `Your private ticket is ${channel}.`)] });
+      } catch (error) {
+        console.error("Ticket creation error:", error);
+        await interaction.editReply({ embeds: [embed("error", "Ticket error", error.message || "Failed to create ticket. Try again.")] });
       }
-      const selectedValue = interaction.values[0];
-      const categoryName = selectedValue.replace(/-/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-      const ticketTypeSlug = selectedValue.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-      const usernameSlug = interaction.user.username.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "user";
-      const channelName = `${ticketTypeSlug}-${usernameSlug}`.slice(0, 90);
-      const channel = await interaction.guild.channels.create({ name: channelName, type: ChannelType.GuildText, topic: `ticket-owner:${interaction.user.id}`, parent: settings.categoryId || undefined, permissionOverwrites: overwrites });
-      const staffRoleIds = settings.staffRoleIds?.length ? settings.staffRoleIds : (settings.staffRoleId ? [settings.staffRoleId] : []);
-      const ticketImageUrl = client.config.ticket.imageUrl || "https://i.ibb.co/BVsB4CS4/382ad2dd02dd701a813c189ec01be1d3.jpg";
-      const ticketEmbed = new EmbedBuilder()
-        .setColor(0xf4df1b)
-        .setTitle(`${categoryName.toUpperCase()} TICKET`)
-        .setDescription(`**Welcome** ${interaction.user}\n**Category:** ${categoryName}\n\nOur support team will assist you shortly.`)
-        .setThumbnail(interaction.user.displayAvatarURL({ size: 256 }))
-        .setImage(ticketImageUrl)
-        .setFooter({ text: "Eagle Premium • server tools" })
-        .setTimestamp();
-
-      ticketEmbed.data.color = 0xf4df1b;
-      ticketEmbed.data.author = { name: "Eagle Premium", icon_url: "https://cdn.discordapp.com/attachments/1536749083912306690/1538405479590531162/eagle.png?ex=6a828f40&is=6a813dc0&hm=0c74e9ab9a3da10f3c614ed2d08008c36cf472606041377e7d276a1e7b640e8e&" };
-      ticketEmbed.data.title = `${categoryName} Ticket`;
-      ticketEmbed.data.description = `**Welcome** ${interaction.user}\n**Category:** ${categoryName}\n\nOur support team will assist you shortly.`;
-      ticketEmbed.data.thumbnail = { url: interaction.user.displayAvatarURL({ size: 256 }) };
-      ticketEmbed.data.image = { url: ticketImageUrl };
-      ticketEmbed.data.footer = { text: "Eagle Premium • server tools" };
-      const ticketButtons = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId("ticket:claim").setLabel("Claim Ticket").setStyle(ButtonStyle.Primary).setEmoji("🎟️"),
-        new ButtonBuilder().setCustomId("ticket:close").setLabel("Close Ticket").setStyle(ButtonStyle.Danger).setEmoji("🔒"),
-      );
-      await channel.send({ content: `${interaction.user}${staffRoleIds.map((id) => ` <@&${id}>`).join("")}`, embeds: [ticketEmbed], components: [ticketButtons], allowedMentions: { users: [interaction.user.id], roles: staffRoleIds } });
-      await interaction.reply({ embeds: [embed("success", "Ticket created", `Your private ticket is ${channel}.`)], ephemeral: true });
     }
     if (interaction.isButton() && ["ticket:claim", "ticket:close", "ticket:reopen", "ticket:delete"].includes(interaction.customId)) {
       const settings = client.db.getGuildSettings(interaction.guildId).tickets;
