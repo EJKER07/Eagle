@@ -3,6 +3,7 @@ const { YouTubePlugin } = require("@distube/youtube");
 const { YtDlpPlugin } = require("@distube/yt-dlp");
 const { SpotifyPlugin } = require("@distube/spotify");
 const { EmbedBuilder } = require("discord.js");
+const { VoiceConnectionStatus, entersState } = require("@discordjs/voice");
 const ffmpeg = require("ffmpeg-static");
 
 module.exports = (client) => {
@@ -13,7 +14,12 @@ module.exports = (client) => {
     const distube = new DisTube(client, {
         emitNewSongOnly: true,
         ffmpeg: {
-            path: ffmpeg
+            path: ffmpeg,
+            args: [
+                "-reconnect", "1",
+                "-reconnect_streamed", "1",
+                "-reconnect_delay_max", "5",
+            ]
         },
         plugins: [
             new YouTubePlugin(),
@@ -24,9 +30,30 @@ module.exports = (client) => {
         ]
     });
 
-    // Track Start Event
+    // Voice Connection State Monitoring
+    distube.on("connectionCreate", async (message, queue) => {
+        console.log(`✅ Voice connection created for guild: ${queue.textChannel?.guild?.name}`);
+        console.log(`   Voice channel: ${queue.voiceChannel?.name}`);
+        console.log(`   Text channel: ${queue.textChannel?.name}`);
+        
+        try {
+            if (queue.connection?.joinConfig?.voiceConnection) {
+                await entersState(queue.connection.joinConfig.voiceConnection, VoiceConnectionStatus.Ready, 30000);
+                console.log(`✅ Voice connection ready and stable`);
+            }
+        } catch (error) {
+            console.error(`❌ Voice connection ready state:`, error.message);
+        }
+    });
+
+    // Track Start Event - Detailed Logging
     distube.on("playSong", (queue, song) => {
-        console.log(`▶️ Now playing: ${song.name} in ${queue.guild?.name}`);
+        console.log(`\n▶️  NOW PLAYING: ${song.name}`);
+        console.log(`    URL: ${song.url}`);
+        console.log(`    Duration: ${song.formattedDuration}`);
+        console.log(`    Guild: ${queue.textChannel?.guild?.name}`);
+        console.log(`    Voice Channel: ${queue.voiceChannel?.name}`);
+        console.log(`    Queue size: ${queue.songs.length}`);
         
         const playEmbed = new EmbedBuilder()
             .setColor("#FEE75C")
@@ -44,34 +71,34 @@ module.exports = (client) => {
 
     // Queue Created
     distube.on("initQueue", (queue) => {
-        const guildName = queue.guild?.name || queue.textChannel?.guild?.name || "unknown";
-        console.log(`✅ Queue created for guild: ${guildName}`);
+        const guildName = queue.textChannel?.guild?.name || "unknown";
+        console.log(`✅ Queue initialized for guild: ${guildName}`);
+    });
+
+    // Song Changed
+    distube.on("songChanged", (queue, song) => {
+        console.log(`⏭️  Song changed to: ${song.name}`);
     });
 
     // No Song
     distube.on("noSong", (queue) => {
-        const guildName = queue.guild?.name || queue.textChannel?.guild?.name || "unknown";
-        console.log(`⚠️ Queue ended: no more songs in ${guildName}`);
+        const guildName = queue.textChannel?.guild?.name || "unknown";
+        console.log(`⚠️  Queue ended: no more songs in ${guildName}`);
     });
 
     // Queue End Event
     distube.on("finish", (queue) => {
+        console.log(`✅ Music queue finished`);
         queue.textChannel?.send("✅ Music queue finished.").catch(() => {});
-    });
-
-    // Voice State Update
-    distube.on("connectionCreate", (message, queue) => {
-        console.log(`✅ Voice connection established in ${queue.voiceChannel?.name}`);
     });
 
     // Add Song Event
     distube.on("addSong", (queue, song) => {
-        console.log(`➕ Song added: ${song.name}`);
+        console.log(`➕ Song added to queue: ${song.name}`);
     });
 
-    // Error Events - Better logging
+    // Error Events - Comprehensive
     distube.on("error", (channel, e) => {
-        // Get proper error message
         let errorMsg = "Unknown error";
         if (e instanceof Error) {
             errorMsg = e.message || String(e);
@@ -81,22 +108,16 @@ module.exports = (client) => {
             errorMsg = String(e);
         }
         
-        console.error("❌ DisTube Error:", errorMsg);
-        console.error("Stack:", e?.stack || "No stack trace");
+        console.error("\n❌ DISTUBE ERROR:");
+        console.error("   Message:", errorMsg);
+        if (e?.stack) console.error("   Stack:", e.stack);
         
-        // Provide helpful diagnostics
         if (errorMsg.includes("Cannot connect") || errorMsg.includes("timeout")) {
-            console.error("⚠️  VOICE CONNECTION ISSUE:");
-            console.error("   - Check bot has CONNECT & SPEAK permissions");
-            console.error("   - Check voice channel is not full");
-            console.error("   - Restart bot if permissions were just added");
+            console.error("\n⚠️  VOICE CONNECTION ISSUE");
         }
         
-        if (errorMsg.includes("bot") || errorMsg.includes("captcha")) {
-            console.error("⚠️  YOUTUBE BOT DETECTION:");
-            console.error("   - Try searching by name instead of URL");
-            console.error("   - Use Spotify links if available");
-            console.error("   - YouTube may be blocking automated access");
+        if (errorMsg.includes("bot") || errorMsg.includes("captcha") || errorMsg.includes("403")) {
+            console.error("\n⚠️  YOUTUBE AUTHENTICATION ISSUE");
         }
 
         if (channel?.send) {
@@ -106,6 +127,6 @@ module.exports = (client) => {
     });
 
     client.distube = distube;
-    console.log("✅ DisTube fully initialized with YtDlp support");
+    console.log("✅ DisTube fully initialized");
     return distube;
 };
