@@ -116,6 +116,16 @@ function getMetric(guildId, userId, metric) {
 
 function listMetrics(guildId, metric, limit = 10) {
   return Object.entries(getGuild(guildId).members)
+    .filter(([userId]) => /^\d+$/.test(userId)) // Only pure numeric user IDs, filter out compound keys
+    .map(([userId, member]) => ({ userId, value: member.metrics?.[metric] || 0 }))
+    .filter((entry) => entry.value > 0)
+    .sort((a, b) => b.value - a.value)
+    .slice(0, limit);
+}
+
+function listAllMetrics(guildId, metric, limit = 10) {
+  // Returns all metrics including compound keys (for daily tracking)
+  return Object.entries(getGuild(guildId).members)
     .map(([userId, member]) => ({ userId, value: member.metrics?.[metric] || 0 }))
     .filter((entry) => entry.value > 0)
     .sort((a, b) => b.value - a.value)
@@ -201,5 +211,5 @@ module.exports = {
   defaults, getGuild, updateGuild, getGuildSettings, updateGuildSettings, persist,
   getAfk, setAfk, clearAfk, setAfkDmOnMention, getLevel, setLevel, getEconomy, updateEconomy,
   addWarning, listWarnings, clearWarnings, getGiveaways, saveGiveaway, removeGiveaway,
-  getMember, updateMember, updateMetric, getMetric, listMetrics,
+  getMember, updateMember, updateMetric, getMetric, listMetrics, listAllMetrics,
 };

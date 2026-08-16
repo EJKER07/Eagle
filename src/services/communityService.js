@@ -23,7 +23,7 @@ function metric(client, guildId, userId, name, amount = 1) {
 function leaderboard(client, guildId, name, limit = 10) {
   if (name !== "dailymessages") return Promise.resolve(client.db.listMetrics(guildId, name, limit));
   const day = new Date().toISOString().slice(0, 10);
-  const entries = client.db.listMetrics(guildId, "messages", 1000)
+  const entries = client.db.listAllMetrics(guildId, "messages", 1000)
     .filter((entry) => entry.userId.endsWith(`:${day}`))
     .map((entry) => ({ ...entry, userId: entry.userId.slice(0, -11) }));
   return Promise.resolve(entries.slice(0, limit));
