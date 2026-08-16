@@ -26,6 +26,8 @@ module.exports = (client) => {
 
     // Track Start Event
     distube.on("playSong", (queue, song) => {
+        console.log(`▶️ Now playing: ${song.name} in ${queue.guild?.name}`);
+        
         const playEmbed = new EmbedBuilder()
             .setColor("#FEE75C")
             .setTitle("🎶 Playing Now")
@@ -45,6 +47,11 @@ module.exports = (client) => {
         console.log(`✅ Queue created for guild: ${queue.guild?.name}`);
     });
 
+    // No Song
+    distube.on("noSong", (queue) => {
+        console.log(`⚠️ Queue ended: no more songs in ${queue.guild?.name}`);
+    });
+
     // Queue End Event
     distube.on("finish", (queue) => {
         queue.textChannel?.send("✅ Music queue finished.").catch(() => {});
@@ -53,6 +60,11 @@ module.exports = (client) => {
     // Voice State Update
     distube.on("connectionCreate", (message, queue) => {
         console.log(`✅ Voice connection established in ${queue.voiceChannel?.name}`);
+    });
+
+    // Add Song Event
+    distube.on("addSong", (queue, song) => {
+        console.log(`➕ Song added: ${song.name}`);
     });
 
     // Error Events

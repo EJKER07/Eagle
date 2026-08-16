@@ -1,4 +1,4 @@
-const { SlashCommandBuilder } = require("discord.js");
+const { SlashCommandBuilder, PermissionFlagsBits } = require("discord.js");
 const { embed } = require("../../utils/embeds");
 const { requireVoice } = require("../../utils/music");
 const { emoji } = require("../../utils/emojis");
@@ -8,13 +8,24 @@ module.exports = {
   async execute(interaction, client) {
     try {
       if (!client.distube) throw new Error("Music is not available because the player failed to initialize.");
+      
       const channel = requireVoice(interaction);
+      
+      // Check bot permissions
+      const botMember = interaction.guild.members.me;
+      if (!botMember.permissionsIn(channel).has([PermissionFlagsBits.Connect, PermissionFlagsBits.Speak])) {
+        throw new Error("I need `CONNECT` and `SPEAK` permissions in this voice channel.");
+      }
+      
       await interaction.deferReply();
       
       const query = interaction.options.getString("query");
+      console.log(`🎵 Playing: ${query} in ${interaction.guild.name}`);
+      
       await client.distube.play(channel, query, { 
         member: interaction.member, 
-        textChannel: interaction.channel 
+        textChannel: interaction.channel,
+        skip: 0
       });
       
       await interaction.editReply({ 
