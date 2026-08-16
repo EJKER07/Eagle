@@ -20,19 +20,33 @@ module.exports = {
       await interaction.deferReply();
       
       const query = interaction.options.getString("query");
-      console.log(`🎵 Playing: ${query} in ${interaction.guild.name}`);
+      console.log(`🎵 [PLAY] Requested: ${query} in guild: ${interaction.guild.name}`);
       
+      // Ensure voice connection is ready before playing
+      if (client.voiceManager) {
+        console.log(`   Verifying voice connection...`);
+        const connectionCheck = await client.voiceManager.ensureConnectionReady(interaction.guildId);
+        if (!connectionCheck.ready) {
+          console.warn(`   Voice connection not ready: ${connectionCheck.error}`);
+          // Continue anyway - DisTube will handle connection
+        } else {
+          console.log(`   Voice connection verified READY`);
+        }
+      }
+      
+      console.log(`   Adding to queue...`);
       await client.distube.play(channel, query, { 
         member: interaction.member, 
         textChannel: interaction.channel,
         skip: 0
       });
       
+      console.log(`   ✅ Successfully added to queue`);
       await interaction.editReply({ 
         embeds: [embed("success", "Added to queue", `${emoji("music")} Your request was added to the music queue.`)] 
       });
     } catch (error) {
-      console.error("Play command error:", error);
+      console.error("❌ [PLAY] Error:", error);
       const payload = { embeds: [embed("error", "Music error", error.message || "Failed to play music.")] };
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply(payload).catch(() => {});
