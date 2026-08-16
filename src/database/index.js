@@ -32,6 +32,7 @@ const guildDefaults = {
   invites: { joinChannelId: null, leaveChannelId: null, joinMessage: "Welcome {mention} to **{server}**!", leaveMessage: "Goodbye **{username}**.", tracked: {} },
   metrics: { blacklistedChannelIds: [] },
   joinNotifications: { pingChannelId: null },
+  roleNotifications: { pingRoleId: null, pingChannelId: null },
   members: { afk: {}, levels: {}, economy: {}, warnings: [] },
   commands: {},
 };
