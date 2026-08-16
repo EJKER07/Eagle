@@ -12,16 +12,11 @@ module.exports = (client) => {
 
     const distube = new DisTube(client, {
         emitNewSongOnly: true,
-        leaveOnFinish: false,
-        leaveOnStop: true,
-        leaveOnEmpty: true,
         searchSongs: 0,
         searchCooldown: 0,
-        nsfw: false,
         ffmpeg: {
             path: ffmpeg
         },
-        customFilters: {},
         plugins: [
             new YtDlpPlugin({
                 update: false // Set to true to auto-update yt-dlp
