@@ -5,7 +5,11 @@ module.exports = {
   aliases: ["disablewelcome", "ungreet"],
   permissions: [PermissionFlagsBits.ManageGuild],
   async execute(interaction, client) {
-    client.db.updateGuildSettings(interaction.guildId, (settings) => ({ ...settings, welcome: { ...settings.welcome, enabled: false } }));
-    await interaction.reply({ embeds: [embed("success", "Welcome disabled", "Welcome messages are disabled for this server.")] });
+    try {
+      client.db.updateGuildSettings(interaction.guildId, (settings) => ({ ...settings, welcome: { ...settings.welcome, enabled: false } }));
+      await interaction.reply({ embeds: [embed("success", "Welcome disabled", "Welcome messages are disabled for this server.")] });
+    } catch (error) {
+      await interaction.reply({ embeds: [embed("error", "Configuration error", error.message)] });
+    }
   },
 };

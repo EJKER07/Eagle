@@ -15,35 +15,39 @@ module.exports = {
     .addSubcommand((sub) => sub.setName("reroll").setDescription("Choose new winners for an ended giveaway.").addStringOption((option) => option.setName("id").setDescription("Giveaway message ID").setRequired(true))),
   permissions: [PermissionFlagsBits.ManageGuild],
   async execute(interaction, client) {
-    const action = interaction.options.getSubcommand();
-    const giveaways = client.db.getGiveaways(interaction.guildId);
-    const id = interaction.options.getString("id");
-    if (action === "create") {
-      const channel = interaction.options.getChannel("channel") || interaction.channel;
-      const duration = parseDuration(interaction.options.getString("duration", true));
-      const giveaway = { id: `${interaction.guildId}-${Date.now()}`, guildId: interaction.guildId, channelId: channel.id, messageId: null, hostId: interaction.user.id, hostAvatarUrl: interaction.user.displayAvatarURL({ size: 256 }), prize: interaction.options.getString("prize", true), winnerCount: interaction.options.getInteger("winners") || 1, endsAt: Date.now() + duration * 1000, entries: [], ended: false };
-      const customEmoji = interaction.guild?.emojis.cache.find((item) => item.name === "Fire_money");
-      const prizeEmoji = interaction.guild?.emojis.cache.find((item) => item.name === "coleader") || "🎁";
-      const reactionEmoji = customEmoji || "🎉";
-      const announcementEmoji = interaction.guild?.emojis.cache.find((item) => item.name === "ANNOUNCE") || "🎉";
-      const message = await channel.send({ embeds: [activeEmbed(giveaway, reactionEmoji, prizeEmoji, announcementEmoji)], components: giveawayComponents(giveaway.id) });
-      await message.react(reactionEmoji).catch(() => {});
-      giveaway.messageId = message.id;
-      client.db.saveGiveaway(interaction.guildId, giveaway);
-      scheduleGiveaway(client, giveaway);
-      await interaction.reply({ embeds: [embed("success", "Giveaway created", `Your giveaway is live in ${channel}.`)], ephemeral: true });
-      return;
+    try {
+      const action = interaction.options.getSubcommand();
+      const giveaways = client.db.getGiveaways(interaction.guildId);
+      const id = interaction.options.getString("id");
+      if (action === "create") {
+        const channel = interaction.options.getChannel("channel") || interaction.channel;
+        const duration = parseDuration(interaction.options.getString("duration", true));
+        const giveaway = { id: `${interaction.guildId}-${Date.now()}`, guildId: interaction.guildId, channelId: channel.id, messageId: null, hostId: interaction.user.id, hostAvatarUrl: interaction.user.displayAvatarURL({ size: 256 }), prize: interaction.options.getString("prize", true), winnerCount: interaction.options.getInteger("winners") || 1, endsAt: Date.now() + duration * 1000, entries: [], ended: false };
+        const customEmoji = interaction.guild?.emojis.cache.find((item) => item.name === "Fire_money");
+        const prizeEmoji = interaction.guild?.emojis.cache.find((item) => item.name === "coleader") || "🎁";
+        const reactionEmoji = customEmoji || "🎉";
+        const announcementEmoji = interaction.guild?.emojis.cache.find((item) => item.name === "ANNOUNCE") || "🎉";
+        const message = await channel.send({ embeds: [activeEmbed(giveaway, reactionEmoji, prizeEmoji, announcementEmoji)], components: giveawayComponents(giveaway.id) });
+        await message.react(reactionEmoji).catch(() => {});
+        giveaway.messageId = message.id;
+        client.db.saveGiveaway(interaction.guildId, giveaway);
+        scheduleGiveaway(client, giveaway);
+        await interaction.reply({ embeds: [embed("success", "GIVEAWAY CREATED", `Your giveaway is live in ${channel}.`)], ephemeral: true });
+        return;
+      }
+      const giveaway = giveaways.find((item) => item.messageId === id);
+      if (!giveaway) return interaction.reply({ embeds: [embed("error", "Giveaway not found", "That giveaway could not be found.")], ephemeral: true });
+      if (action === "end") {
+        if (giveaway.ended) return interaction.reply({ embeds: [embed("error", "Giveaway ended", "That giveaway has already ended.")], ephemeral: true });
+        await finishGiveaway(client, giveaway);
+        await interaction.reply({ embeds: [embed("success", "GIVEAWAY ENDED", "New winners were selected.")], ephemeral: true });
+        return;
+      }
+      if (!giveaway.ended) return interaction.reply({ embeds: [embed("error", "Giveaway active", "End the giveaway before rerolling it.")], ephemeral: true });
+      await finishGiveaway(client, { ...giveaway, ended: false });
+      await interaction.reply({ embeds: [embed("success", "GIVEAWAY REROLLED", "New winners were selected.")], ephemeral: true });
+    } catch (error) {
+      await interaction.reply({ embeds: [embed("error", "Giveaway operation failed", error.message)], ephemeral: true });
     }
-    const giveaway = giveaways.find((item) => item.messageId === id);
-    if (!giveaway) throw new Error("That giveaway could not be found.");
-    if (action === "end") {
-      if (giveaway.ended) throw new Error("That giveaway has already ended.");
-      await finishGiveaway(client, giveaway);
-      await interaction.reply({ embeds: [embed("success", "Giveaway ended", "New winners were selected.")], ephemeral: true });
-      return;
-    }
-    if (!giveaway.ended) throw new Error("End the giveaway before rerolling it.");
-    await finishGiveaway(client, { ...giveaway, ended: false });
-    await interaction.reply({ embeds: [embed("success", "Giveaway rerolled", "New winners were selected.")], ephemeral: true });
   },
 };

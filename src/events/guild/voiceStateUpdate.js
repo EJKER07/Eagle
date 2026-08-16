@@ -1,6 +1,7 @@
 const { Events } = require("discord.js");
 const { metric } = require("../../services/communityService");
 const { getLevelInfo, getVoiceXpForSeconds } = require("../../services/levelingService");
+const { embed } = require("../../utils/embeds");
 
 module.exports = {
   name: Events.VoiceStateUpdate,

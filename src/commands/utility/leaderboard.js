@@ -31,7 +31,8 @@ module.exports = {
     const type = interaction.options.getString("type") || "messages";
     const top = client.db.listMetrics(interaction.guildId, type, 10);
     const rows = await Promise.all(top.map((row, i) => formatLeaderboardRow(interaction.guild, row, i, client)));
-    const title = `${type.toUpperCase()} LEADERBOARD`;
+    const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
+    const title = `${typeLabel} Leaderboard`;
     await interaction.reply({ embeds: [embed("info", title, rows.length ? rows.join("\n") : "No data yet.")] });
   },
   formatLeaderboardRow,

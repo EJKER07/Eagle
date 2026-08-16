@@ -6,9 +6,13 @@ module.exports = {
     .addStringOption((o) => o.setName("message").setDescription("Supports {username}, {server}, {membercount}").setRequired(true)),
   permissions: [PermissionFlagsBits.ManageGuild],
   async execute(interaction, client) {
-    const channel = interaction.options.getChannel("channel");
-    const message = interaction.options.getString("message");
-    client.db.updateGuildSettings(interaction.guildId, (settings) => ({ ...settings, goodbye: { ...settings.goodbye, enabled: true, channelId: channel.id, message } }));
-    await interaction.reply({ embeds: [embed("success", "Goodbye configured", `Messages will be sent in ${channel}.`)] });
+    try {
+      const channel = interaction.options.getChannel("channel");
+      const message = interaction.options.getString("message");
+      client.db.updateGuildSettings(interaction.guildId, (settings) => ({ ...settings, goodbye: { ...settings.goodbye, enabled: true, channelId: channel.id, message } }));
+      await interaction.reply({ embeds: [embed("success", "Goodbye configured", `Messages will be sent in ${channel}.`)] });
+    } catch (error) {
+      await interaction.reply({ embeds: [embed("error", "Configuration error", error.message)] });
+    }
   },
 };

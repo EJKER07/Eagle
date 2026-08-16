@@ -104,7 +104,7 @@ async function showAllData(interaction, client, guildId) {
     const summary = getSummary(cmdName, data);
 
     currentEmbed.addFields({
-      name: `${isEnabled} ${cmdName.toUpperCase()}`,
+      name: `${isEnabled} ${cmdName}`,
       value: summary,
       inline: false,
     });
@@ -134,7 +134,7 @@ async function showCommandData(interaction, client, guildId, commandName) {
 
   const embed = new EmbedBuilder()
     .setColor(0xf4df1b)
-    .setTitle(`⚙️ ${commandName.toUpperCase()} SETTINGS`)
+    .setTitle(`⚙️ ${commandName} Settings`)
     .setDescription(
       `Guild: <@&${interaction.guild.id}> (${interaction.guild.name})`
     );
