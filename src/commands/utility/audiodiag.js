@@ -40,7 +40,7 @@ module.exports = {
         for (const chunk of chunks.slice(0, 10)) {
           const embed = new EmbedBuilder()
             .setColor(0x00ff00)
-            .setTitle("Audio Diagnostics")
+            .setTitle("AUDIO DIAGNOSTICS")
             .setDescription(`\`\`\`\n${chunk}\n\`\`\``);
           
           if (chunks.indexOf(chunk) === 0) {
@@ -52,7 +52,7 @@ module.exports = {
       } else {
         const embed = new EmbedBuilder()
           .setColor(0x00ff00)
-          .setTitle("Audio Diagnostics")
+          .setTitle("AUDIO DIAGNOSTICS")
           .setDescription(`\`\`\`\n${diagnostics}\n\`\`\``);
         
         await interaction.editReply({ embeds: [embed] });

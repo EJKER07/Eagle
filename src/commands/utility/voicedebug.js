@@ -75,7 +75,7 @@ module.exports = {
       
       const embed = new EmbedBuilder()
         .setColor(voiceConnection ? 0x00ff00 : 0xff0000)
-        .setTitle("🎧 Voice Debug Info")
+        .setTitle("🎧 VOICE DEBUG INFO")
         .setDescription(description)
         .setTimestamp();
       

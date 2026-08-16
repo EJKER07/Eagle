@@ -67,7 +67,7 @@ module.exports = {
         embeds: [
           new EmbedBuilder()
             .setColor(0xed4245)
-            .setTitle("❌ Error")
+            .setTitle("❌ ERROR")
             .setDescription(error.message || "Failed to retrieve datastore information"),
         ],
       });
@@ -84,7 +84,7 @@ async function showAllData(interaction, client, guildId) {
       embeds: [
         new EmbedBuilder()
           .setColor(0xf4df1b)
-          .setTitle("📊 Guild Datastore - All Commands")
+          .setTitle("📊 GUILD DATASTORE - ALL COMMANDS")
           .setDescription("No command settings configured yet. All commands are using defaults."),
       ],
     });
@@ -93,7 +93,7 @@ async function showAllData(interaction, client, guildId) {
   const embeds = [];
   let currentEmbed = new EmbedBuilder()
     .setColor(0xf4df1b)
-    .setTitle("📊 Guild Datastore - All Commands")
+    .setTitle("📊 GUILD DATASTORE - ALL COMMANDS")
     .setDescription(`Total configured: **${commandNames.length}** commands`);
 
   let fieldCount = 0;
@@ -134,7 +134,7 @@ async function showCommandData(interaction, client, guildId, commandName) {
 
   const embed = new EmbedBuilder()
     .setColor(0xf4df1b)
-    .setTitle(`⚙️ ${commandName.toUpperCase()} Settings`)
+    .setTitle(`⚙️ ${commandName.toUpperCase()} SETTINGS`)
     .setDescription(
       `Guild: <@&${interaction.guild.id}> (${interaction.guild.name})`
     );
@@ -198,7 +198,7 @@ async function showStats(interaction, client, guildId) {
 
   const statsEmbed = new EmbedBuilder()
     .setColor(0xf4df1b)
-    .setTitle("📈 Datastore Statistics")
+    .setTitle("📈 DATASTORE STATISTICS")
     .addFields(
       {
         name: "Command Breakdown",

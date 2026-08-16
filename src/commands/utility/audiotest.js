@@ -64,7 +64,7 @@ module.exports = {
       
       const embed = new EmbedBuilder()
         .setColor(result.includes("❌") ? 0xed4245 : 0xf4df1b)
-        .setTitle("Audio Test Results")
+        .setTitle("AUDIO TEST RESULTS")
         .setDescription(result);
       
       await interaction.editReply({ embeds: [embed] });
