@@ -49,7 +49,7 @@ module.exports = {
     yes: process.env.EMOJI_YES || "✅",
     no: process.env.EMOJI_NO || "❌",
     afk: process.env.EMOJI_AFK || "💤",
-    greenver: process.env.EMOJI_GREENVER || "✅",
-    crossmark: process.env.EMOJI_CROSSMARK || "❌",
+    greenver: process.env.EMOJI_GREENVER || "<:greenver:1538390862440964126>",
+    crossmark: process.env.EMOJI_CROSSMARK || "<:crossmark:1538388096155123733>",
   },
 };
