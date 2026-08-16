@@ -19,7 +19,7 @@ async function confirm(interaction, text, action) {
     new ButtonBuilder().setCustomId('moderation:confirm').setLabel('Confirm').setStyle(ButtonStyle.Danger),
     new ButtonBuilder().setCustomId('moderation:cancel').setLabel('Cancel').setStyle(ButtonStyle.Secondary)
   );
-  const response = await interaction.reply({ embeds: [new EmbedBuilder().setTitle('Confirm moderation action').setDescription(text).setColor(0xef4444)], components: [row], ephemeral: true, fetchReply: true });
+  const response = await interaction.reply({ embeds: [new EmbedBuilder().setTitle('CONFIRM MODERATION ACTION').setDescription(text).setColor(0xef4444)], components: [row], ephemeral: true, fetchReply: true });
   try {
     const choice = await response.awaitMessageComponent({ time: 15_000, filter: component => component.user.id === interaction.user.id });
     if (choice.customId === 'moderation:cancel') return choice.update({ content: 'Action cancelled.', embeds: [], components: [] });

@@ -29,9 +29,11 @@ module.exports = {
           client.db.setLevel(oldState.guild.id, oldState.id, { xp: totalXp, level: nextLevelInfo.level, lastXpAt: Date.now() });
           if (nextLevelInfo.level > previousLevel) {
             const member = oldState.guild.members.cache.get(oldState.id);
-            if (member) {
-              const channel = oldState.channel || oldState.guild.channels.cache.get(oldState.channelId);
-              if (channel) await channel.send({ content: `${member} reached level **${nextLevelInfo.level}** in voice!` }).catch(() => {});
+            const announcementChannelId = settings.leveling.announcementChannelId || settings.leveling.leaderboardChannelId;
+            const targetChannel = announcementChannelId ? oldState.guild.channels.cache.get(announcementChannelId) || oldState.guild.channels.resolve(announcementChannelId) : oldState.channel;
+            if (member && targetChannel?.isTextBased()) {
+              const voiceLevelEmbed = embed("leveling", "XJKER", `${member} has reached level **${nextLevelInfo.level}** in voice!\n\n**Level-up!**`);
+              await targetChannel.send({ embeds: [voiceLevelEmbed] }).catch(() => {});
             }
           }
         }

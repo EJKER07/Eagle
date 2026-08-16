@@ -5,7 +5,7 @@ async function sendLog(guild, context, type, payload) {
   if (!channelId) return false;
   const channel = guild.channels.cache.get(channelId) || await guild.channels.fetch(channelId).catch(() => null);
   if (!channel?.isTextBased()) return false;
-  await channel.send({ embeds: [new EmbedBuilder().setTitle(payload.title).setDescription(payload.description || '').setColor(payload.color || 0x64748b).setTimestamp()] });
+  await channel.send({ embeds: [new EmbedBuilder().setTitle(String(payload.title || '').toUpperCase()).setDescription(payload.description || '').setColor(payload.color || 0x64748b).setTimestamp()] });
   return true;
 }
 

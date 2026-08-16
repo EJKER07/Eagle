@@ -57,7 +57,7 @@ module.exports = (client) => {
         
         const playEmbed = new EmbedBuilder()
             .setColor("#FEE75C")
-            .setTitle("🎶 Playing Now")
+            .setTitle("🎶 PLAYING NOW")
             .setDescription(`[${song.name}](${song.url})`)
             .addFields(
                 { name: "⏱️ Duration", value: `\`${song.formattedDuration}\``, inline: true },

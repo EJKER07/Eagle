@@ -9,7 +9,7 @@ const categories = Object.freeze({
 });
 
 function themedEmbed(title, description) {
-  return new EmbedBuilder().setTitle(title).setDescription(description).setColor(0xf4df1b).setFooter({ text: 'Eagle Premium • server tools' });
+  return new EmbedBuilder().setTitle(String(title).toUpperCase()).setDescription(description).setColor(0xf4df1b).setFooter({ text: 'Eagle Premium • server tools' });
 }
 
 function homeEmbed() {

@@ -22,7 +22,7 @@ const guildDefaults = {
     enabled: false, punishment: "clear_roles", windowMs: 10000, roleSnapshot: null,
     whitelistUsers: [], limits: { channelDelete: 3, roleDelete: 3, ban: 3 },
   },
-  leveling: { enabled: false, xpPerMessage: 1, cooldownMs: 60000 },
+  leveling: { enabled: false, xpPerMessage: 1, cooldownMs: 60000, announcementChannelId: null, leaderboardChannelId: null },
   moderation: { escalation: {} },
   automod: {
     enabled: false,

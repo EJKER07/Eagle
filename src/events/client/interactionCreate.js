@@ -34,7 +34,7 @@ module.exports = {
       const ticketImageUrl = client.config.ticket.imageUrl || "https://i.ibb.co/BVsB4CS4/382ad2dd02dd701a813c189ec01be1d3.jpg";
       const ticketEmbed = new EmbedBuilder()
         .setColor(0xf4df1b)
-        .setTitle(`${categoryName} Ticket`)
+        .setTitle(`${categoryName.toUpperCase()} TICKET`)
         .setDescription(`**Welcome** ${interaction.user}\n**Category:** ${categoryName}\n\nOur support team will assist you shortly.`)
         .setThumbnail(interaction.user.displayAvatarURL({ size: 256 }))
         .setImage(ticketImageUrl)

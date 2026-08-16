@@ -118,6 +118,7 @@ class CommandDataStore {
         enabled: false,
         xpPerMessage: 10,
         cooldownMs: 60000,
+        announcementChannelId: process.env.LEVELING_ANNOUNCEMENT_CHANNEL_ID || "1534099905210089492",
         leaderboardChannelId: null,
       },
       moderation: {

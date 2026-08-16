@@ -92,7 +92,7 @@ module.exports = {
       const levelEmbed = new EmbedBuilder()
         .setColor(0x2b2d31)
         .setAuthor({ name: `${message.author.username.toUpperCase()} ON TOP`, iconURL: avatarUrl })
-        .setTitle("Level-up!")
+        .setTitle("LEVEL-UP!")
         .setDescription(`**${previousLevel + 1} • ${nextLevelInfo.level}**`)
         .setThumbnail(avatarUrl)
         .setFooter({ text: "Eagle Premium • leveling" })

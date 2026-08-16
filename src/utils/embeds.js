@@ -15,9 +15,11 @@ const embedColors = {
 };
 
 function embed(type, title, description, fields = []) {
+  const normalizedTitle = typeof title === "string" ? title.toUpperCase() : title;
+
   return new EmbedBuilder()
     .setColor(embedColors[type] || embedColors.info)
-    .setTitle(title)
+    .setTitle(normalizedTitle)
     .setDescription(description || null)
     .addFields(fields.map((field) => ({ ...field, name: field.name.trim(), value: String(field.value).trim() })))
     .setFooter({ text: `${config.brand.name} • server tools` })
