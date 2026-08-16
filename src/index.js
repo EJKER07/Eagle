@@ -6,6 +6,7 @@ const { loadCommands } = require("./handlers/command-handler");
 const { loadEvents } = require("./handlers/event-handler");
 const database = require("./database");
 const VoiceConnectionManager = require("./services/voiceConnectionManager");
+const AudioStreamMonitor = require("./services/audioStreamMonitor");
 
 const token = config.deployment.token;
 
@@ -38,6 +39,7 @@ if (!token) {
   loadEvents(client, config.paths.events);
   require("./distube")(client);
   client.voiceManager = new VoiceConnectionManager(client);
+  client.audioMonitor = new AudioStreamMonitor(client);
 
   process.on("unhandledRejection", (error) => console.error("Unhandled rejection", error));
   process.on("uncaughtException", (error) => {
