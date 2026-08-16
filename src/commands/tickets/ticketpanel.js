@@ -9,11 +9,18 @@ module.exports = {
     if (channel.type !== ChannelType.GuildText) throw new Error("Choose a text channel.");
     client.db.updateGuildSettings(interaction.guildId, (settings) => ({ ...settings, tickets: { ...settings.tickets, enabled: true } }));
     const categories = [
-      ["Support", "support"], ["General", "utility"], ["Purchase", "purchase"], ["Report", "report"],
-      ["Partnership", "partnership"], ["Giveaway", "giveaway"], ["Nitro", "nitro"], ["Deco", "utility"], ["LTC", "ltc"],
+      ["Ltc rewards", "ltc", "ltc"],
+      ["Nitro/Deco rewards", "nitro", "nitro-deco"],
+      ["Robux rewards", "purchase", "robux"],
+      ["Support", "support", "support"],
+      ["General", "utility", "general"],
+      ["Report", "report", "report"],
+      ["Purchase", "purchase", "purchase"],
+      ["Partnership", "partnership", "partnership"],
+      ["Giveaway", "giveaway", "giveaway"],
     ];
-    const menu = new StringSelectMenuBuilder().setCustomId("ticket:create").setPlaceholder(`${emoji("ticket")} Choose a ticket category`).addOptions(
-      categories.map(([name, icon]) => ({ label: name, value: name.toLowerCase(), emoji: componentEmoji(icon) })),
+    const menu = new StringSelectMenuBuilder().setCustomId("ticket:create").setPlaceholder(`${emoji("ticket")} Select a category to create a ticket...`).addOptions(
+      categories.map(([name, icon, value]) => ({ label: name, value, emoji: componentEmoji(icon) })),
     );
     const panelEmbed = embed("ticket", "Support Tickets", "Select a category to create a support ticket");
     if (client.config.ticket.panelImageUrl) panelEmbed.setThumbnail(client.config.ticket.panelImageUrl);
