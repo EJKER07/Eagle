@@ -14,16 +14,30 @@ module.exports = {
       await metric(client, member.guild.id, invite.inviter.id, "invites");
     }
     await sendMemberMessage(client, member, "join");
-    const settings = client.db.getGuildSettings(member.guild.id).welcome;
-    if (!settings.enabled || !settings.channelId) return;
-    const channel = member.guild.channels.cache.get(settings.channelId);
+    const settings = client.db.getGuildSettings(member.guild.id);
+    
+    // Send join ping notification
+    const joinNotifications = settings.joinNotifications || {};
+    if (joinNotifications.pingChannelId) {
+      const pingChannel = member.guild.channels.cache.get(joinNotifications.pingChannelId) || await member.guild.channels.fetch(joinNotifications.pingChannelId).catch(() => null);
+      if (pingChannel?.isTextBased()) {
+        await pingChannel.send({
+          embeds: [embed("info", "MEMBER JOINED", `${member} **${member.user.username}** joined the server!`)],
+        }).catch(() => {});
+      }
+    }
+    
+    // Send welcome message
+    const welcomeSettings = settings.welcome;
+    if (!welcomeSettings.enabled || !welcomeSettings.channelId) return;
+    const channel = member.guild.channels.cache.get(welcomeSettings.channelId);
     if (!channel?.isTextBased()) return;
-    const message = render(settings.message, member, channel);
+    const message = render(welcomeSettings.message, member, channel);
     const sent = await channel.send({
       content: message,
       embeds: [embed("success", "Welcome", message)],
       allowedMentions: { users: [member.id] },
     });
-    if (settings.deleteAfter >= 0) setTimeout(() => sent.delete().catch(() => {}), Math.min(settings.deleteAfter, 1) * 1000);
+    if (welcomeSettings.deleteAfter >= 0) setTimeout(() => sent.delete().catch(() => {}), Math.min(welcomeSettings.deleteAfter, 1) * 1000);
   },
 };
