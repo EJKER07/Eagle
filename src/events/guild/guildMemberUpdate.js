@@ -18,7 +18,9 @@ module.exports = {
       const pingChannel = newMember.guild.channels.cache.get(settings.pingChannelId) || await newMember.guild.channels.fetch(settings.pingChannelId).catch(() => null);
       if (pingChannel?.isTextBased()) {
         const pingMsg = await pingChannel.send({
-          embeds: [embed("success", "ROLE ASSIGNED", `${newMember} **${newMember.user.username}** got a role!`)],
+          content: `<@${newMember.user.id}>`,
+          embeds: [embed("success", "ROLE ASSIGNED", `**${newMember.user.username}** got a role!`)],
+          allowedMentions: { users: [newMember.user.id] },
         }).catch(() => {});
         // Auto-delete after 1 second
         if (pingMsg) setTimeout(() => pingMsg.delete().catch(() => {}), 1000);
