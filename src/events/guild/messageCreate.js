@@ -1,4 +1,4 @@
-const { Events } = require("discord.js");
+const { Events, EmbedBuilder } = require("discord.js");
 const { embed } = require("../../utils/embeds");
 const { runPrefixCommand } = require("../../services/prefixCommandService");
 const { metric } = require("../../services/communityService");
@@ -85,7 +85,21 @@ module.exports = {
 
     client.db.setLevel(message.guild.id, message.author.id, { xp: totalXp, level: nextLevelInfo.level, lastXpAt: Date.now() });
     if (nextLevelInfo.level > previousLevel) {
-      await message.channel.send({ embeds: [embed("leveling", "Level up!", `${message.author} reached level **${nextLevelInfo.level}**.`)] });
+      const announcementChannel = leveling.announcementChannelId
+        ? message.guild.channels.cache.get(leveling.announcementChannelId) || message.guild.channels.resolve(leveling.announcementChannelId)
+        : message.channel;
+      const avatarUrl = message.author.displayAvatarURL({ size: 256, extension: "png" });
+      const levelEmbed = new EmbedBuilder()
+        .setColor(0x2b2d31)
+        .setAuthor({ name: `${message.author.username.toUpperCase()} ON TOP`, iconURL: avatarUrl })
+        .setTitle("Level-up!")
+        .setDescription(`**${previousLevel + 1} • ${nextLevelInfo.level}**`)
+        .setThumbnail(avatarUrl)
+        .setFooter({ text: "Eagle Premium • leveling" })
+        .setTimestamp();
+      if (announcementChannel?.isTextBased()) {
+        await announcementChannel.send({ embeds: [levelEmbed] }).catch(() => {});
+      }
     }
   },
 };
