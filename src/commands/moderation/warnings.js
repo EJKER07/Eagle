@@ -7,6 +7,6 @@ module.exports = {
     const user = interaction.options.getUser("user");
     const warnings = client.db.listWarnings(interaction.guildId, user.id);
     const text = warnings.length ? warnings.map((warning, index) => `**${index + 1}.** ${warning.reason} — <@${warning.moderator_id}> <t:${Math.floor(warning.created_at / 1000)}:R>`).join("\n") : "No warnings found.";
-    await interaction.reply({ embeds: [embed("moderation", `Warnings for ${user.username}`, text)] });
+    await interaction.reply({ embeds: [embed("moderation", `WARNINGS FOR ${user.username.toUpperCase()}`, text)] });
   },
 };

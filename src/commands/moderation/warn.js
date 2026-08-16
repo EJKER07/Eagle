@@ -21,9 +21,31 @@ module.exports = {
     const escalation = settings.moderation.escalation[String(count)];
     let action = "No automatic escalation.";
     const member = await interaction.guild.members.fetch(user.id).catch(() => null);
-    if (member && escalation === "timeout") await member.timeout(10 * 60 * 1000, `Warning escalation: ${warning.reason}`).then(() => { action = "10 minute timeout applied."; }).catch(() => {});
-    if (member && escalation === "kick") await member.kick(`Warning escalation: ${warning.reason}`).then(() => { action = "Member kicked."; }).catch(() => {});
-    if (escalation === "ban") await interaction.guild.members.ban(user.id, { reason: `Warning escalation: ${warning.reason}` }).then(() => { action = "Member banned."; }).catch(() => {});
-    await interaction.reply({ embeds: [embed("moderation", "Warning issued", `${user} now has **${count}** warning(s).\nReason: ${warning.reason}\n${action}`)] });
+    
+    if (member && escalation === "timeout") {
+      try {
+        await member.timeout(10 * 60 * 1000, `Warning escalation: ${warning.reason}`);
+        action = "10 minute timeout applied.";
+      } catch (error) {
+        action = "Timeout failed: " + error.message;
+      }
+    }
+    if (member && escalation === "kick") {
+      try {
+        await member.kick(`Warning escalation: ${warning.reason}`);
+        action = "Member kicked.";
+      } catch (error) {
+        action = "Kick failed: " + error.message;
+      }
+    }
+    if (member && escalation === "ban") {
+      try {
+        await interaction.guild.members.ban(user.id, { reason: `Warning escalation: ${warning.reason}` });
+        action = "Member banned.";
+      } catch (error) {
+        action = "Ban failed: " + error.message;
+      }
+    }
+    await interaction.reply({ embeds: [embed("moderation", "WARNING ISSUED", `${user} now has **${count}** warning(s).\nReason: ${warning.reason}\n${action}`)] });
   },
 };
