@@ -21,9 +21,11 @@ module.exports = {
     if (joinNotifications.pingChannelId) {
       const pingChannel = member.guild.channels.cache.get(joinNotifications.pingChannelId) || await member.guild.channels.fetch(joinNotifications.pingChannelId).catch(() => null);
       if (pingChannel?.isTextBased()) {
-        await pingChannel.send({
+        const pingMsg = await pingChannel.send({
           embeds: [embed("info", "MEMBER JOINED", `${member} **${member.user.username}** joined the server!`)],
         }).catch(() => {});
+        // Auto-delete after 1 second
+        if (pingMsg) setTimeout(() => pingMsg.delete().catch(() => {}), 1000);
       }
     }
     
