@@ -24,9 +24,13 @@ module.exports = {
       for (const roleId of settings.staffRoleIds?.length ? settings.staffRoleIds : [settings.staffRoleId]) {
         if (roleId) overwrites.push({ id: roleId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] });
       }
-      const channel = await interaction.guild.channels.create({ name: `ticket-${interaction.user.username}`.toLowerCase().replace(/[^a-z0-9-]/g, "-").slice(0, 90), type: ChannelType.GuildText, topic: `ticket-owner:${interaction.user.id}`, parent: settings.categoryId || undefined, permissionOverwrites: overwrites });
+      const selectedValue = interaction.values[0];
+      const categoryName = selectedValue.replace(/-/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+      const ticketTypeSlug = selectedValue.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      const usernameSlug = interaction.user.username.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "user";
+      const channelName = `${ticketTypeSlug}-${usernameSlug}`.slice(0, 90);
+      const channel = await interaction.guild.channels.create({ name: channelName, type: ChannelType.GuildText, topic: `ticket-owner:${interaction.user.id}`, parent: settings.categoryId || undefined, permissionOverwrites: overwrites });
       const staffRoleIds = settings.staffRoleIds?.length ? settings.staffRoleIds : (settings.staffRoleId ? [settings.staffRoleId] : []);
-      const categoryName = interaction.values[0].replace(/-/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
       const ticketImageUrl = client.config.ticket.imageUrl || "https://i.ibb.co/BVsB4CS4/382ad2dd02dd701a813c189ec01be1d3.jpg";
       const ticketEmbed = new EmbedBuilder()
         .setColor(0xf4df1b)
