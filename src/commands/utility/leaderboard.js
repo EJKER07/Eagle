@@ -1,14 +1,20 @@
 const { SlashCommandBuilder } = require("discord.js");
 const { embed } = require("../../utils/embeds");
 
-function getDisplayName(guild, userId) {
-  const member = guild.members.cache.get(userId) || guild.members.cache.find((candidate) => candidate.user?.id === userId);
-  if (member?.user?.username) return member.user.username;
-  return userId;
+async function getDisplayName(guild, userId, client) {
+  try {
+    const member = guild.members.cache.get(userId) || await guild.members.fetch(userId).catch(() => null);
+    if (member?.user?.username) return member.user.username;
+    const user = await client.users.fetch(userId).catch(() => null);
+    if (user?.username) return user.username;
+  } catch (error) {
+    // User not found or error fetching
+  }
+  return "Unknown User";
 }
 
-function formatLeaderboardRow(guild, row, index) {
-  const label = getDisplayName(guild, row.userId);
+async function formatLeaderboardRow(guild, row, index, client) {
+  const label = await getDisplayName(guild, row.userId, client);
   return `**${index + 1}.** ${label} — **${row.value}**`;
 }
 
@@ -24,7 +30,7 @@ module.exports = {
   async execute(interaction, client) {
     const type = interaction.options.getString("type") || "messages";
     const top = client.db.listMetrics(interaction.guildId, type, 10);
-    const rows = top.map((row, i) => formatLeaderboardRow(interaction.guild, row, i));
+    const rows = await Promise.all(top.map((row, i) => formatLeaderboardRow(interaction.guild, row, i, client)));
     const title = `${type.toUpperCase()} LEADERBOARD`;
     await interaction.reply({ embeds: [embed("info", title, rows.length ? rows.join("\n") : "No data yet.")] });
   },
