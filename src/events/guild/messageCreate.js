@@ -2,6 +2,7 @@ const { Events } = require("discord.js");
 const { embed } = require("../../utils/embeds");
 const { runPrefixCommand } = require("../../services/prefixCommandService");
 const { metric } = require("../../services/communityService");
+const { getLevelInfo } = require("../../services/levelingService");
 
 function shouldReactToEnter(content) {
   const normalized = String(content || "").trim().toLowerCase();
@@ -76,9 +77,15 @@ module.exports = {
     if (!leveling.enabled) return;
     const row = client.db.getLevel(message.guild.id, message.author.id);
     if (row && Date.now() - row.lastXpAt < leveling.cooldownMs) return;
-    const xp = (row?.xp || 0) + leveling.xpPerMessage;
-    const level = Math.floor(Math.sqrt(xp / 100));
-    client.db.setLevel(message.guild.id, message.author.id, { xp, level, lastXpAt: Date.now() });
-    if (level > (row?.level || 0)) await message.channel.send({ embeds: [embed("leveling", "Level up!", `${message.author} reached level **${level}**.`)] });
+
+    const gainedXp = Number(leveling.xpPerMessage) || 1;
+    const previousLevel = row?.level || 0;
+    const totalXp = (row?.xp || 0) + gainedXp;
+    const nextLevelInfo = getLevelInfo(totalXp, `${message.guild.id}:${message.author.id}`);
+
+    client.db.setLevel(message.guild.id, message.author.id, { xp: totalXp, level: nextLevelInfo.level, lastXpAt: Date.now() });
+    if (nextLevelInfo.level > previousLevel) {
+      await message.channel.send({ embeds: [embed("leveling", "Level up!", `${message.author} reached level **${nextLevelInfo.level}**.`)] });
+    }
   },
 };
