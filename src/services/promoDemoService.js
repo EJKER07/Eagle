@@ -1,13 +1,13 @@
 const DEFAULT_STAFF_ROLE_ID = "1534099901976416257";
 
 const ROLE_TARGETS = [
-  { roleId: "1534099901976416257", name: "Trial Staff", role: "Trial Staff", messages: 700, tickets: 10, nextRoleId: "1534099902022549517" },
-  { roleId: "1534099902022549517", name: "Staff", role: "Staff", messages: 1000, tickets: 12, nextRoleId: "1534099902022549518" },
-  { roleId: "1534099902022549518", name: "Junior Moderator", role: "Junior Moderator", messages: 1500, tickets: 14, nextRoleId: "1534099902022549519" },
-  { roleId: "1534099902022549519", name: "Senior Moderator", role: "Senior Moderator", messages: 2000, tickets: 16, nextRoleId: "1538763624158470164" },
-  { roleId: "1538763624158470164", name: "Trial Admin", role: "Trial Admin", messages: 2500, tickets: 18, nextRoleId: "1538763818497478726" },
-  { roleId: "1538763818497478726", name: "Admin", role: "Admin", messages: 3000, tickets: 20, nextRoleId: "1534099902051647616" },
-  { roleId: "1534099902051647616", name: "Manager", role: "Manager", messages: 4000, tickets: 25, nextRoleId: "Max Level achieved!" },
+  { roleId: "1534099901976416257", name: "Trial Staff", role: "Trial Staff", messages: 350, tickets: 5, nextRoleId: "1534099902022549517" },
+  { roleId: "1534099902022549517", name: "Staff", role: "Staff", messages: 500, tickets: 6, nextRoleId: "1534099902022549518" },
+  { roleId: "1534099902022549518", name: "Junior Moderator", role: "Junior Moderator", messages: 750, tickets: 7, nextRoleId: "1534099902022549519" },
+  { roleId: "1534099902022549519", name: "Senior Moderator", role: "Senior Moderator", messages: 1000, tickets: 8, nextRoleId: "1538763624158470164" },
+  { roleId: "1538763624158470164", name: "Trial Admin", role: "Trial Admin", messages: 1250, tickets: 9, nextRoleId: "1538763818497478726" },
+  { roleId: "1538763818497478726", name: "Admin", role: "Admin", messages: 1500, tickets: 10, nextRoleId: "1534099902051647616" },
+  { roleId: "1534099902051647616", name: "Manager", role: "Manager", messages: 2000, tickets: 13, nextRoleId: "Max Level achieved!" },
 ];
 
 function parseDateValue(raw) {

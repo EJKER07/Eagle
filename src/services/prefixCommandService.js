@@ -213,13 +213,13 @@ function buildPersonalPromoRequestEmbed(guild, member, metrics = { messages: 0, 
     : `<@&${result.nextRoleId}>`;
 
   const roleBreakdown = [
-    "<@&1534099901976416257> — 700 messages or 10 tickets",
-    "<@&1534099902022549517> — 1000 messages or 12 tickets",
-    "<@&1534099902022549518> — 1500 messages or 14 tickets",
-    "<@&1534099902022549519> — 2000 messages or 16 tickets",
-    "<@&1538763624158470164> — 2500 messages or 18 tickets",
-    "<@&1538763818497478726> — 3000 messages or 20 tickets",
-    "<@&1534099902051647616> — 4000 messages or 25 tickets",
+    "<@&1534099901976416257> — 350 messages or 5 tickets",
+    "<@&1534099902022549517> — 500 messages or 6 tickets",
+    "<@&1534099902022549518> — 750 messages or 7 tickets",
+    "<@&1534099902022549519> — 1000 messages or 8 tickets",
+    "<@&1538763624158470164> — 1250 messages or 9 tickets",
+    "<@&1538763818497478726> — 1500 messages or 10 tickets",
+    "<@&1534099902051647616> — 2000 messages or 13 tickets",
   ].join("\n");
 
   const title = `❤️ ${guild?.name || "XJKER CM"} Promo-demo ❤️`;

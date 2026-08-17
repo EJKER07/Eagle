@@ -47,7 +47,7 @@ test('promoreq builds a personal promo-progress embed using the author metrics a
   assert.match(result.data.description, /<@&1534099901976416257>/);
   assert.match(result.data.description, /<@&1534099902022549517>/);
   assert.match(result.data.fields[0].value, /Your Progress/);
-  assert.match(result.data.fields[0].value, /600\/700/);
+  assert.match(result.data.fields[0].value, /600\/350/);
   assert.match(result.data.fields[1].value, /Current Est. Verdict/);
   assert.match(result.data.fields[1].value, /Next Role/i);
   assert.match(result.data.fields[2].value, /Promotion/);
