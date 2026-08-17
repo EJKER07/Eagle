@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { render } = require('../src/welcome');
 const { clearAfk, setAfk } = require('../src/afk');
+const { evaluatePromoDemo, getCheckinState } = require('../src/services/promoDemoService');
 
 test('disablegoodbye resolves the shared embed utility', () => {
   const command = require('../src/commands/configuration/disablegoodbye');
@@ -20,4 +21,18 @@ test('AFK state persists and clears cleanly', async () => {
   assert.equal(database.getGuild('guild').afk.user.reason, 'away');
   assert.equal(clearAfk(database, 'guild', 'user'), true);
   assert.equal(clearAfk(database, 'guild', 'user'), false);
+});
+
+test('promo demo awards promotion when both metrics clear 50% of the target', () => {
+  const result = evaluatePromoDemo({ messages: 600, tickets: 3 }, { requiredMessages: 1000, requiredTickets: 6 });
+  assert.equal(result.status, 'promo');
+  assert.equal(result.messagesPercent, 60);
+  assert.equal(result.ticketsPercent, 50);
+});
+
+test('first staff check-in records a ticket and marks the member as checked in', () => {
+  const state = { ticketOwner: 'user-1', staffMembers: new Set(), ticketTotals: { 'user-1': 0 } };
+  const next = getCheckinState(state, { userId: 'user-2', roleId: '1534099901976416257' }, 'ticket-42');
+  assert.equal(next.ticketTotals['user-2'], 1);
+  assert.equal(next.checkins['ticket-42'], 'user-2');
 });

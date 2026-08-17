@@ -1,8 +1,9 @@
-const { Events, EmbedBuilder } = require("discord.js");
+const { Events, EmbedBuilder, PermissionFlagsBits } = require("discord.js");
 const { embed } = require("../../utils/embeds");
 const { runPrefixCommand } = require("../../services/prefixCommandService");
 const { metric } = require("../../services/communityService");
 const { getLevelInfo } = require("../../services/levelingService");
+const { DEFAULT_STAFF_ROLE_ID, getCheckinState } = require("../../services/promoDemoService");
 
 function shouldReactToEnter(content) {
   const normalized = String(content || "").trim().toLowerCase();
@@ -48,6 +49,40 @@ module.exports = {
       await metric(client, message.guild.id, message.author.id, "messages");
       const day = new Date().toISOString().slice(0, 10);
       await metric(client, message.guild.id, `${message.author.id}:${day}`, "messages");
+    }
+
+    const ticketTopic = message.channel.topic || "";
+    const ticketOwnerId = ticketTopic.match(/^ticket-owner:(\d+)$/)?.[1];
+    const configuredStaffRoleIds = settings.tickets?.staffRoleIds?.length ? settings.tickets.staffRoleIds : (settings.tickets?.staffRoleId ? [settings.tickets.staffRoleId] : []);
+    const staffRoleIds = [...new Set([DEFAULT_STAFF_ROLE_ID, ...configuredStaffRoleIds.filter(Boolean)])];
+    const hasStaffRole = message.member && (message.member.permissions.has(PermissionFlagsBits.ManageChannels) || staffRoleIds.some((roleId) => message.member.roles.cache.has(roleId)));
+    if (ticketOwnerId && hasStaffRole && message.author.id !== ticketOwnerId) {
+      const promotionState = settings.promotion || { checkins: {}, ticketTotals: {} };
+      const previousCheckin = promotionState.checkins?.[message.channel.id];
+      const nextState = getCheckinState({
+        ...promotionState,
+        staffMembers: new Set(promotionState.staffMembers || []),
+      }, { userId: message.author.id, roleId: staffRoleIds.find((roleId) => message.member.roles.cache.has(roleId)) || DEFAULT_STAFF_ROLE_ID }, message.channel.id);
+
+      if (!previousCheckin && nextState.checkins?.[message.channel.id] === message.author.id) {
+        const currentCount = nextState.ticketTotals?.[message.author.id] || 1;
+        client.db.updateGuildSettings(message.guild.id, (guildSettings) => ({
+          ...guildSettings,
+          promotion: {
+            ...(guildSettings.promotion || {}),
+            checkins: nextState.checkins,
+            ticketTotals: nextState.ticketTotals,
+          },
+        }));
+        client.db.updateMetric(message.guild.id, message.author.id, "tickets", 1);
+        const day = new Date().toISOString().slice(0, 10);
+        client.db.updateMetric(message.guild.id, `${message.author.id}:${day}`, "tickets", 1);
+        const confirmation = await message.reply({
+          content: `${message.author} got check-in. This ticket is now counted for your check-ins (${currentCount}).`,
+          allowedMentions: { repliedUser: false },
+        }).catch(() => null);
+        if (confirmation) setTimeout(() => confirmation.delete().catch(() => {}), 1000);
+      }
     }
     if (await processGiveawayEntry(client, message)) return;
     if (shouldReactToEnter(message.content)) {

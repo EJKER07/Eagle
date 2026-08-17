@@ -18,6 +18,7 @@ const guildDefaults = {
   welcome: { enabled: false, channelId: null, message: "Welcome {mention} to **{server}**!" },
   goodbye: { enabled: false, channelId: null, message: "Goodbye **{username}**." },
   tickets: { enabled: false, categoryId: null, staffRoleId: null, staffRoleIds: [], logChannelId: null },
+  promotion: { checkins: {}, ticketTotals: {} },
   antinuke: {
     enabled: false, punishment: "clear_roles", windowMs: 10000, roleSnapshot: null,
     whitelistUsers: [], limits: { channelDelete: 3, roleDelete: 3, ban: 3 },
@@ -116,11 +117,11 @@ function getMember(guildId, userId) {
 }
 
 function updateMetric(guildId, userId, metric, amount = 1) {
-  const allowed = ["invites", "messages", "voiceSeconds"];
+  const allowed = ["invites", "messages", "voiceSeconds", "tickets", "checkins"];
   if (!allowed.includes(metric) || !Number.isFinite(amount)) throw new Error("Invalid metric update.");
   return updateMember(guildId, userId, (member) => ({
     ...member,
-    metrics: { invites: 0, messages: 0, voiceSeconds: 0, ...(member.metrics || {}), [metric]: Math.max(0, (member.metrics?.[metric] || 0) + amount) },
+    metrics: { invites: 0, messages: 0, voiceSeconds: 0, tickets: 0, checkins: 0, ...(member.metrics || {}), [metric]: Math.max(0, (member.metrics?.[metric] || 0) + amount) },
   }));
 }
 

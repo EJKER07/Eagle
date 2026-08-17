@@ -4,7 +4,7 @@ const root = path.resolve(__dirname, "../..");
 
 module.exports = {
   brand: {
-    name: "Eagle Premium",
+    name: "XJKER CM",
     color: 0xf4df1b,
     colors: { success: 0xf4df1b, error: 0xed4245, warning: 0xf4df1b, neutral: 0xf4df1b },
   },

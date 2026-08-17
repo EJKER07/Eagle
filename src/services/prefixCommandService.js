@@ -1,6 +1,7 @@
 const { PermissionFlagsBits } = require("discord.js");
 const { createTranscript } = require("discord-html-transcripts");
 const { embed } = require("../utils/embeds");
+const { getPromotionReport, evaluatePromoDemo, sortReportRows } = require("./promoDemoService");
 
 function tokenize(input) {
   return input.match(/(?:[^\s"]+|"[^"]*")+/g)?.map((token) => token.replace(/^"|"$/g, "")) || [];
@@ -160,9 +161,36 @@ async function runPrefixCommand(client, message, input) {
   if (command === "ticket" || command === "tickets") {
     return message.reply({ embeds: [embed("ticket", "Ticket commands", "`$close` `$reopen` `$rename <name>` `$claim` `$add @user @role` `$remove @user @role` `$delete`\nUse these inside a ticket channel.")] });
   }
-  if (![
-    "close", "reopen", "rename", "claim", "add", "remove", "delete",
-  ].includes(command)) return runLoadedPrefixCommand(client, message, input);
+  if (["promodemo", "promo", "checkin"].includes(command)) {
+    const rangeInput = args.join(" ") || "17/8/26 to 24/8/26";
+    const report = getPromotionReport(client, message.guild.id, rangeInput);
+    const rows = sortReportRows(report.rows, 1000, 6);
+    const byStatus = {
+      promo: rows.filter((row) => row.result.status === "promo"),
+      stay: rows.filter((row) => row.result.status === "stay"),
+      demote: rows.filter((row) => row.result.status === "demote"),
+    };
+
+    const buildSection = (label, list, icon) => {
+      const lines = list.length ? list.slice(0, 5).map((row) => {
+        const result = row.result;
+        return `${icon} <@${row.userId}> — ${row.messages} msgs (${result.messagesPercent}%) | ${row.tickets} tickets (${result.ticketsPercent}%)`;
+      }).join("\n") : "No members in this section.";
+      return { name: `${icon} ${label} (${list.length})`, value: lines, inline: false };
+    };
+
+    const promoEmbed = embed("info", "Promotion / Demotion — Pending Confirmation", `Period: ${report.startText} — ${report.endText} • ${rows.length} member(s) evaluated`);
+    promoEmbed.addFields(
+      buildSection("Promotion", byStatus.promo, "✅"),
+      buildSection("Stay", byStatus.stay, "⚠️"),
+      buildSection("Demotion", byStatus.demote, "❌")
+    );
+
+    const reply = await message.reply({ embeds: [promoEmbed] });
+    setTimeout(() => reply.delete().catch(() => {}), 15000);
+    return true;
+  }
+  if (!["close", "reopen", "rename", "claim", "add", "remove", "delete"].includes(command)) return runLoadedPrefixCommand(client, message, input);
   if (!isTicket(message)) {
     const reply = await message.reply({ embeds: [embed("error", "Ticket only", "This command can only be used inside a ticket channel.")] });
     setTimeout(() => reply.delete().catch(() => {}), 3000);
