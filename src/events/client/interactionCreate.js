@@ -115,7 +115,39 @@ module.exports = {
           return;
         }
         if (interaction.customId === "ticket:close") {
-          await interaction.channel.permissionOverwrites.edit(interaction.channel.topic?.match(/ticket-owner:(\d+)/)?.[1] || interaction.user.id, { SendMessages: false });
+          const ticketOwnerId = interaction.channel.topic?.match(/ticket-owner:(\d+)/)?.[1];
+          const claimedBy = interaction.channel.messages.cache.find((msg) => msg.author.id === interaction.user.id && msg.content.includes("got check-in"))?.author?.id || interaction.user.id;
+          const ticketMessages = await interaction.channel.messages.fetch({ limit: 100 }).catch(() => new Map());
+          const staffMessages = Array.from(ticketMessages.values()).filter((message) => message.author.id === claimedBy).length;
+
+          if (staffMessages < 5) {
+            const guildSettings = client.db.getGuildSettings(interaction.guildId);
+            const currentTotal = guildSettings.promotion?.ticketTotals?.[claimedBy] || 0;
+            const nextTicketTotals = { ...(guildSettings.promotion?.ticketTotals || {}) };
+            nextTicketTotals[claimedBy] = Math.max(0, Number(currentTotal) - 1);
+
+            client.db.updateGuildSettings(interaction.guildId, (currentGuildSettings) => ({
+              ...currentGuildSettings,
+              promotion: {
+                ...(currentGuildSettings.promotion || {}),
+                checkins: currentGuildSettings.promotion?.checkins || {},
+                ticketTotals: nextTicketTotals,
+              },
+            }));
+            client.db.persist?.();
+
+            const alertEmbed = new EmbedBuilder()
+              .setColor(0x0f172a)
+              .setAuthor({ name: "🏆 XJKER CM | MANAGEMENT TOOLS" })
+              .setTitle("⚠️ Check-in revoked")
+              .setDescription(`⚠️ Check-in revoked for <@${claimedBy}>: Staff member did not meet the minimum 5-message support threshold required to secure this ticket check-in.`)
+              .setFooter({ text: "XJKER CM | GIVEAWAYS • CHILL • HANGOUT" })
+              .setTimestamp();
+
+            await interaction.channel.send({ embeds: [alertEmbed] }).catch(() => {});
+          }
+
+          await interaction.channel.permissionOverwrites.edit(ticketOwnerId || interaction.user.id, { SendMessages: false });
           return interaction.update({ embeds: [embed("warning", "Ticket closed", "This ticket is now read-only.")], components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("ticket:reopen").setLabel("Reopen").setStyle(ButtonStyle.Success).setEmoji("🔓"), new ButtonBuilder().setCustomId("ticket:delete").setLabel("Delete").setStyle(ButtonStyle.Danger).setEmoji("🗑️"))] });
         }
         if (interaction.customId === "ticket:reopen") {

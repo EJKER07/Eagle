@@ -190,14 +190,14 @@ function getPromotionReport(client, guildId, rangeText) {
   const guild = client.db.getGuildSettings(guildId);
   const { start, end, startText, endText } = parseDateRange(rangeText);
   const messages = sumMetricForRange(guild.members || {}, "messages", start, end);
-  const tickets = sumMetricForRange(guild.members || {}, "tickets", start, end);
+  const ticketTotals = guild.promotion?.ticketTotals || {};
 
-  const rows = Object.keys(new Set([...Object.keys(messages), ...Object.keys(tickets)])).map((userId) => {
+  const rows = Object.keys(new Set([...Object.keys(messages), ...Object.keys(ticketTotals)])).map((userId) => {
     const member = client.guilds?.cache?.get(guildId)?.members?.cache?.get(userId) || null;
     const row = {
       userId,
       messages: Number(messages[userId] || 0),
-      tickets: Number(tickets[userId] || 0),
+      tickets: Number(ticketTotals[userId] || 0),
     };
     const customTarget = member ? evaluateRoleTarget(row, member) : evaluatePromoDemo(row, { requiredMessages: 1000, requiredTickets: 6 });
     row.result = customTarget;
@@ -220,7 +220,7 @@ function getPromotionReport(client, guildId, rangeText) {
   };
 }
 
-function getUserMetricsUpToDate(guildMembers = {}, userId, endDate = new Date()) {
+function getUserMetricsUpToDate(guildMembers = {}, userId, endDate = new Date(), promotionTicketTotals = {}) {
   const totals = { messages: 0, tickets: 0 };
   if (!userId) return totals;
   const endKey = dateKey(endDate);
@@ -228,7 +228,6 @@ function getUserMetricsUpToDate(guildMembers = {}, userId, endDate = new Date())
   const directMember = guildMembers[userId];
   if (directMember && typeof directMember === "object") {
     totals.messages += Number(directMember.metrics?.messages || 0);
-    totals.tickets += Number(directMember.metrics?.tickets || 0);
   }
 
   for (const [memberKey, member] of Object.entries(guildMembers || {})) {
@@ -238,9 +237,9 @@ function getUserMetricsUpToDate(guildMembers = {}, userId, endDate = new Date())
     if (storedUserId !== String(userId) || !datePart || !/^\d{4}-\d{2}-\d{2}$/.test(datePart)) continue;
     if (datePart > endKey) continue;
     totals.messages += Number(member.metrics?.messages || 0);
-    totals.tickets += Number(member.metrics?.tickets || 0);
   }
 
+  totals.tickets = Number(promotionTicketTotals?.[userId] || 0);
   return totals;
 }
 

@@ -2,8 +2,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { render } = require('../src/welcome');
 const { clearAfk, setAfk } = require('../src/afk');
-const { evaluatePromoDemo, getCheckinState, getCheckinLeaderboard, registerTicketCheckin, getRoleTarget, ROLE_TARGETS } = require('../src/services/promoDemoService');
-const { buildPersonalPromoRequestEmbed, resetStaffCheckinStats, resetAllStaffCheckins } = require('../src/services/prefixCommandService');
+const { evaluatePromoDemo, getCheckinState, getCheckinLeaderboard, registerTicketCheckin, getRoleTarget, ROLE_TARGETS, getUserMetricsUpToDate } = require('../src/services/promoDemoService');
+const { buildPersonalPromoRequestEmbed, resetStaffCheckinStats, resetAllStaffCheckins, triggerPromoCycleReset } = require('../src/services/prefixCommandService');
 
 test('disablegoodbye resolves the shared embed utility', () => {
   const command = require('../src/commands/configuration/disablegoodbye');
@@ -130,6 +130,18 @@ test('promoreq and promotion verdicts render the next role using role mentions a
   assert.match(result.data.fields[1].value, /<@&1534099902022549517>/);
 });
 
+test('promo totals prefer the check-in leaderboard ticket count over raw ticket metric rows', () => {
+  const guildMembers = {
+    'u-1': { metrics: { messages: 500, tickets: 1 } },
+    'u-1:2026-08-17': { metrics: { messages: 100, tickets: 1 } },
+  };
+
+  const totals = getUserMetricsUpToDate(guildMembers, 'u-1', new Date('2026-08-17T00:00:00Z'), { 'u-1': 7 });
+
+  assert.equal(totals.messages, 600);
+  assert.equal(totals.tickets, 7);
+});
+
 test('resetstaff clears a single member promotion record and metric totals', () => {
   const state = {
     promotion: {
@@ -170,4 +182,35 @@ test('resetallstaff wipes out all promotion check-ins and ticket totals for the 
   assert.deepEqual(next.promotion.ticketTotals, {});
   assert.equal(next.members['u-1'].metrics.tickets, 0);
   assert.equal(next.members['u-2'].metrics.checkins, 0);
+});
+
+test('promo cycle reset clears all tracked message and ticket counters after the report is sent', () => {
+  const guildState = {
+    promotion: { checkins: { 'ticket-1': 'u-1' }, ticketTotals: { 'u-1': 4, 'u-2': 2 } },
+    members: {
+      'u-1': { metrics: { messages: 120, tickets: 4, checkins: 4 } },
+      'u-2': { metrics: { messages: 90, tickets: 2, checkins: 2 } },
+      'u-1:2026-08-17': { metrics: { messages: 55, tickets: 1, checkins: 1 } },
+    },
+  };
+
+  const client = {
+    db: {
+      getGuildSettings: () => guildState,
+      updateGuildSettings: (_guildId, updater) => {
+        const next = updater(guildState);
+        Object.keys(guildState).forEach((key) => delete guildState[key]);
+        Object.assign(guildState, next);
+        return next;
+      },
+    },
+  };
+
+  const next = triggerPromoCycleReset(client, { id: 'g-1', name: 'XJKER CM' });
+
+  assert.deepEqual(next.promotion.checkins, {});
+  assert.deepEqual(next.promotion.ticketTotals, {});
+  assert.equal(next.members['u-1'].metrics.messages, 0);
+  assert.equal(next.members['u-2'].metrics.tickets, 0);
+  assert.equal(next.members['u-1:2026-08-17'].metrics.messages, 0);
 });

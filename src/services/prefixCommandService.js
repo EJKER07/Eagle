@@ -3,6 +3,8 @@ const { createTranscript } = require("discord-html-transcripts");
 const { embed } = require("../utils/embeds");
 const { getPromotionReport, evaluateRoleTarget, getRoleTarget, ROLE_TARGETS, getCheckinLeaderboard, getUserMetricsUpToDate } = require("./promoDemoService");
 
+const LOG_CHANNEL_ID = "YOUR_LOG_CHANNEL_ID_HERE";
+
 function tokenize(input) {
   return input.match(/(?:[^\s"]+|"[^"]*")+/g)?.map((token) => token.replace(/^"|"$/g, "")) || [];
 }
@@ -56,6 +58,15 @@ function buildPromoLine(guild, row, member) {
   const suffix = status === "double-promotion" ? " (x2 skip!)" : "";
   const mention = member ? `<@${member.id}>` : `<@${row.userId}>`;
   return `${mention} — ${row.messages}/${row.targetMessages ?? row.messages} msgs (${row.messagesPercent}%), ${row.tickets}/${row.targetTickets ?? row.tickets} tickets (${row.ticketsPercent}%) ➡️ ${nextRoleText}${suffix}`;
+}
+
+function renderProgressBar(currentValue, targetValue, width = 12) {
+  const current = Number(currentValue) || 0;
+  const target = Number(targetValue) || 1;
+  const ratio = Math.max(0, Math.min(current / Math.max(target, 1), 1));
+  const filled = Math.round(ratio * width);
+  const empty = Math.max(width - filled, 0);
+  return `${"■".repeat(filled)}${"□".repeat(empty)}`;
 }
 
 async function resolveOptionValue(definition, value, message) {
@@ -202,16 +213,18 @@ function buildPersonalPromoRequestEmbed(guild, member, metrics = { messages: 0, 
     : `<@&${result.nextRoleId}>`;
 
   const roleBreakdown = [
-    "🔴 <@&1534099901976416257> — 700 messages or 10 tickets",
-    "🟠 <@&1534099902022549517> — 1000 messages or 12 tickets",
-    "🟢 <@&1534099902022549518> — 1500 messages or 14 tickets",
-    "🔵 <@&1534099902022549519> — 2000 messages or 16 tickets",
-    "🔲 <@&1538763624158470164> — 2500 messages or 18 tickets",
-    "🌸 <@&1538763818497478726> — 3000 messages or 20 tickets",
-    "🟡 <@&1534099902051647616> — 4000 messages or 25 tickets",
+    "<@&1534099901976416257> — 700 messages or 10 tickets",
+    "<@&1534099902022549517> — 1000 messages or 12 tickets",
+    "<@&1534099902022549518> — 1500 messages or 14 tickets",
+    "<@&1534099902022549519> — 2000 messages or 16 tickets",
+    "<@&1538763624158470164> — 2500 messages or 18 tickets",
+    "<@&1538763818497478726> — 3000 messages or 20 tickets",
+    "<@&1534099902051647616> — 4000 messages or 25 tickets",
   ].join("\n");
 
   const title = `❤️ ${guild?.name || "XJKER CM"} Promo-demo ❤️`;
+  const messageBar = renderProgressBar(result.messages, target.messages || 1);
+  const ticketBar = renderProgressBar(result.tickets, target.tickets || 1);
 
   return new EmbedBuilder()
     .setAuthor({ name: "🏆 XJKER CM | MANAGEMENT TOOLS" })
@@ -221,7 +234,7 @@ function buildPersonalPromoRequestEmbed(guild, member, metrics = { messages: 0, 
     .addFields(
       {
         name: "Your Progress",
-        value: `Your Progress: ${result.messages}/${target.messages} Messages (${result.messagesPercent}%) | ${result.tickets}/${target.tickets} Tickets (${result.ticketsPercent}%)`,
+        value: `Your Progress: ${result.messages}/${target.messages} Messages [${messageBar}] ${result.messagesPercent}%\n${result.tickets}/${target.tickets} Tickets [${ticketBar}] ${result.ticketsPercent}%`,
         inline: false,
       },
       {
@@ -295,11 +308,101 @@ function resetAllStaffCheckins(state) {
       const metrics = { ...(member.metrics || {}) };
       if (Object.prototype.hasOwnProperty.call(metrics, "tickets")) metrics.tickets = 0;
       if (Object.prototype.hasOwnProperty.call(metrics, "checkins")) metrics.checkins = 0;
+      if (Object.prototype.hasOwnProperty.call(metrics, "messages")) metrics.messages = 0;
       nextState.members[memberKey] = { ...member, metrics };
     });
   }
 
   return nextState;
+}
+
+function triggerPromoCycleReset(client, guild) {
+  const guildId = guild?.id || guild;
+  if (!guildId || !client?.db?.updateGuildSettings) return null;
+  const guildSettings = client.db.getGuildSettings(guildId);
+  const nextSettings = resetAllStaffCheckins(guildSettings);
+  client.db.updateGuildSettings(guildId, () => nextSettings);
+  client.db.persist?.();
+  return nextSettings;
+}
+
+async function relayPromoDemoLog(guild, promoEmbed, roleUpdateStatus = []) {
+  if (!guild || !guild.channels || !guild.channels.cache) return;
+  const logChannel = guild.channels.cache.get(LOG_CHANNEL_ID) || guild.channels.resolve(LOG_CHANNEL_ID);
+  if (!logChannel || !logChannel.isTextBased?.()) return;
+
+  const statusText = roleUpdateStatus.length ? roleUpdateStatus.slice(0, 10).join("\n") : "No staff role changes were needed.";
+  const roleStatusEmbed = new EmbedBuilder()
+    .setAuthor({ name: "🏆 XJKER CM | MANAGEMENT TOOLS" })
+    .setTitle("📝 Promotion Audit Log")
+    .setDescription(`**Role updates:**\n${statusText}`)
+    .setColor(0x0f172a)
+    .setFooter({ text: "XJKER CM | GIVEAWAYS • CHILL • HANGOUT" })
+    .setTimestamp();
+
+  await logChannel.send({ embeds: [promoEmbed, roleStatusEmbed] }).catch(() => {});
+}
+
+function getCurrentTierIndex(member) {
+  if (!member || !member.roles || !member.roles.cache) return 0;
+  const roleIds = new Set(member.roles.cache.map((role) => String(role.id || "")));
+  for (let index = ROLE_TARGETS.length - 1; index >= 0; index -= 1) {
+    if (roleIds.has(String(ROLE_TARGETS[index].roleId))) return index;
+  }
+  return 0;
+}
+
+async function applyPromotionRoleChanges(guild, evaluatedRows = []) {
+  if (!guild?.members?.cache) return [];
+  const statusLines = [];
+
+  for (const row of evaluatedRows) {
+    const member = guild.members.cache.get(row.userId) || null;
+    if (!member || !member.roles || !member.roles.add || !member.roles.remove) continue;
+
+    const verdict = String(row.status || row.legacyStatus || "stay").toLowerCase();
+    const currentTier = getCurrentTierIndex(member);
+    let targetTier = currentTier;
+    let targetRoleId = ROLE_TARGETS[currentTier]?.roleId || ROLE_TARGETS[0].roleId;
+
+    try {
+      if (verdict === "double-promotion") {
+        targetTier = Math.min(currentTier + 2, ROLE_TARGETS.length - 1);
+        targetRoleId = ROLE_TARGETS[targetTier].roleId;
+        await member.roles.add(targetRoleId);
+        if (currentTier >= 0 && currentTier < ROLE_TARGETS.length) {
+          await member.roles.remove(ROLE_TARGETS[currentTier].roleId);
+        }
+        statusLines.push(`${member.user?.tag || row.userId}: ${ROLE_TARGETS[currentTier]?.name || "Current rank"} → ${ROLE_TARGETS[targetTier].name}`);
+      } else if (verdict === "promotion") {
+        targetTier = Math.min(currentTier + 1, ROLE_TARGETS.length - 1);
+        targetRoleId = ROLE_TARGETS[targetTier].roleId;
+        await member.roles.add(targetRoleId);
+        if (currentTier >= 0 && currentTier < ROLE_TARGETS.length) {
+          await member.roles.remove(ROLE_TARGETS[currentTier].roleId);
+        }
+        statusLines.push(`${member.user?.tag || row.userId}: ${ROLE_TARGETS[currentTier]?.name || "Current rank"} → ${ROLE_TARGETS[targetTier].name}`);
+      } else if (verdict === "demotion") {
+        if (currentTier === 0) {
+          await member.roles.remove("1534099901976416257");
+          statusLines.push(`${member.user?.tag || row.userId}: Trial Staff → Removed from staff`);
+        } else {
+          targetTier = Math.max(currentTier - 1, 0);
+          targetRoleId = ROLE_TARGETS[targetTier].roleId;
+          await member.roles.add(targetRoleId);
+          await member.roles.remove(ROLE_TARGETS[currentTier].roleId);
+          statusLines.push(`${member.user?.tag || row.userId}: ${ROLE_TARGETS[currentTier]?.name || "Current rank"} → ${ROLE_TARGETS[targetTier].name}`);
+        }
+      } else {
+        statusLines.push(`${member.user?.tag || row.userId}: stay (${ROLE_TARGETS[currentTier]?.name || "Current rank"})`);
+      }
+    } catch (error) {
+      console.error(`Failed to update role for ${row.userId}:`, error);
+      statusLines.push(`${member.user?.tag || row.userId}: role update failed`);
+    }
+  }
+
+  return statusLines;
 }
 
 async function runPrefixCommand(client, message, input) {
@@ -311,9 +414,14 @@ async function runPrefixCommand(client, message, input) {
     return message.reply({ embeds: [embed("ticket", "Ticket commands", "`$close` `$reopen` `$rename <name>` `$claim` `$add @user @role` `$remove @user @role` `$delete`\nUse these inside a ticket channel.")] });
   }
   if (command === "promoreq") {
-    const guildSettings = client.db.getGuildSettings(message.guild.id);
     const member = message.member || message.guild.members.cache.get(message.author.id) || { id: message.author.id, roles: { cache: [] } };
-    const metrics = getUserMetricsUpToDate(guildSettings.members || {}, message.author.id, new Date());
+    const freshGuildSettings = client.db.getGuildSettings(message.guild.id);
+    const metrics = getUserMetricsUpToDate(
+      freshGuildSettings.members || {},
+      message.author.id,
+      new Date(),
+      freshGuildSettings.promotion?.ticketTotals || {}
+    );
     const embed = buildPersonalPromoRequestEmbed(message.guild, member, metrics);
     return message.reply({ embeds: [embed] });
   }
@@ -440,8 +548,60 @@ async function runPrefixCommand(client, message, input) {
       .setTimestamp();
 
     const reply = await message.reply({ embeds: [promoEmbed] });
+    const roleUpdateStatus = await applyPromotionRoleChanges(message.guild, evaluatedRows);
+    await relayPromoDemoLog(message.guild, promoEmbed, roleUpdateStatus);
+    triggerPromoCycleReset(client, message.guild);
+    await message.channel.send({
+      embeds: [new EmbedBuilder()
+        .setAuthor({ name: "🏆 XJKER CM | MANAGEMENT TOOLS" })
+        .setTitle("⚠️ System Notice")
+        .setDescription([
+          "⚠️ **System Notice:** All staff message counters and ticket check-ins have been automatically reset to 0 for the start of the next evaluation period.",
+          "",
+          roleUpdateStatus.length ? `**Role updates:**\n${roleUpdateStatus.slice(0, 10).join("\n")}` : "**Role updates:** No staff role changes were needed.",
+        ].join("\n"))
+        .setColor(0x0f172a)
+        .setFooter({ text: "XJKER CM | GIVEAWAYS • CHILL • HANGOUT" })
+        .setTimestamp()],
+    }).catch(() => {});
     setTimeout(() => reply.delete().catch(() => {}), 15000);
     return true;
+  }
+  if (command === "staffalert") {
+    if (!message.member || (!message.member.permissions.has(PermissionFlagsBits.ManageChannels) && !message.member.permissions.has(PermissionFlagsBits.Administrator))) {
+      return message.reply({ embeds: [embed("error", "Permission denied", "Only managers can trigger the mid-week staff activity alert.")] });
+    }
+
+    const guildSettings = client.db.getGuildSettings(message.guild.id);
+    const memberMetrics = guildSettings.members || {};
+    const ticketTotals = guildSettings.promotion?.ticketTotals || {};
+    const staffRoleIds = new Set(ROLE_TARGETS.map((entry) => String(entry.roleId)));
+    const alerts = [];
+
+    for (const [memberId, member] of message.guild.members.cache) {
+      if (!member || member.user.bot) continue;
+      const hasStaffRole = member.roles.cache.some((role) => staffRoleIds.has(String(role.id)));
+      if (!hasStaffRole) continue;
+      const metrics = getUserMetricsUpToDate(memberMetrics, memberId, new Date(), ticketTotals);
+      if (Number(metrics.messages || 0) < 300) {
+        try {
+          await member.send({ embeds: [embed("warning", "Staff activity check", "⚠️ Your current promo-demo activity is below the weekly minimum. Please catch up before the next evaluation window closes.")] }).catch(() => {});
+          alerts.push(`<@${memberId}>`);
+        } catch (error) {
+          console.warn(`Unable to DM staff alert to ${memberId}: ${error.message}`);
+        }
+      }
+    }
+
+    const alertEmbed = new EmbedBuilder()
+      .setAuthor({ name: "🏆 XJKER CM | MANAGEMENT TOOLS" })
+      .setTitle("📣 Mid-week Staff Alert")
+      .setDescription(alerts.length ? `Sent low-activity warnings to: ${alerts.join(", ")}` : "No staff members currently need a warning alert.")
+      .setColor(0x0f172a)
+      .setFooter({ text: "XJKER CM | GIVEAWAYS • CHILL • HANGOUT" })
+      .setTimestamp();
+
+    return message.reply({ embeds: [alertEmbed] });
   }
   if (!["close", "reopen", "rename", "claim", "add", "remove", "delete"].includes(command)) return runLoadedPrefixCommand(client, message, input);
   if (!isTicket(message)) {
@@ -516,4 +676,6 @@ module.exports = {
   buildPersonalPromoRequestEmbed,
   resetStaffCheckinStats,
   resetAllStaffCheckins,
+  triggerPromoCycleReset,
+  applyPromotionRoleChanges,
 };
