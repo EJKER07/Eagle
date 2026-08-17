@@ -43,12 +43,16 @@ function parseDateRange(input) {
   const end = parseDateValue(match[2]);
   const rangeStart = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 0, 0, 0, 0);
   const rangeEnd = new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59, 999);
+  const differenceInDays = Math.floor((rangeEnd.getTime() - rangeStart.getTime()) / (1000 * 60 * 60 * 24));
+  if (differenceInDays > 7) {
+    throw new Error("Evaluation range exceeded! The dates must be within a maximum of 7 days.");
+  }
   return { start: rangeStart, end: rangeEnd, startText: formatDate(rangeStart), endText: formatDate(rangeEnd) };
 }
 
 function getRoleTarget(member) {
   if (!member || !member.roles || !member.roles.cache) return ROLE_TARGETS[0];
-  const matches = ROLE_TARGETS.filter((entry) => member.roles.cache.some((role) => role && role.name === entry.role));
+  const matches = ROLE_TARGETS.filter((entry) => member.roles.cache.some((role) => role && (role.name === entry.role || String(role.id) === String(entry.role))));
   if (!matches.length) return ROLE_TARGETS[0];
   return matches.reduce((best, current) => (current.messages > best.messages ? current : best), matches[0]);
 }
@@ -112,7 +116,7 @@ function sortReportRows(rows, requiredMessages = 1000, requiredTickets = 6) {
   });
 }
 
-function getCheckinState(state = {}, actor, channelId) {
+function registerTicketCheckin(state = {}, actor, channelId) {
   const next = {
     ...state,
     staffMembers: new Set(state.staffMembers || []),
@@ -132,6 +136,10 @@ function getCheckinState(state = {}, actor, channelId) {
   }
 
   return next;
+}
+
+function getCheckinState(state = {}, actor, channelId) {
+  return registerTicketCheckin(state, actor, channelId);
 }
 
 function getCheckinLeaderboard(ticketTotals = {}, limit = 10) {
@@ -167,12 +175,17 @@ function getPromotionReport(client, guildId, rangeText) {
   const tickets = sumMetricForRange(guild.members || {}, "tickets", start, end);
 
   const rows = Object.keys(new Set([...Object.keys(messages), ...Object.keys(tickets)])).map((userId) => {
+    const member = client.guilds?.cache?.get(guildId)?.members?.cache?.get(userId) || null;
     const row = {
       userId,
       messages: Number(messages[userId] || 0),
       tickets: Number(tickets[userId] || 0),
     };
-    row.result = evaluatePromoDemo(row, { requiredMessages: 1000, requiredTickets: 6 });
+    const customTarget = member ? evaluateRoleTarget(row, member) : evaluatePromoDemo(row, { requiredMessages: 1000, requiredTickets: 6 });
+    row.result = customTarget;
+    row.role = customTarget.role;
+    row.targetMessages = customTarget.targetMessages;
+    row.targetTickets = customTarget.targetTickets;
     return row;
   }).filter((row) => row.messages > 0 || row.tickets > 0).sort((a, b) => {
     const aScore = a.messages + (a.tickets * 200);
@@ -201,6 +214,7 @@ module.exports = {
   evaluateRoleTarget,
   sortReportRows,
   getCheckinState,
+  registerTicketCheckin,
   getCheckinLeaderboard,
   sumMetricForRange,
   getPromotionReport,

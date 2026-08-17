@@ -3,6 +3,7 @@ const { executeInteraction } = require("../../services/interactionService");
 const { embed } = require("../../utils/embeds");
 const { createTranscript } = require("discord-html-transcripts");
 const { activeEmbed } = require("../../services/giveawayService");
+const { getCheckinState } = require("../../services/promoDemoService");
 
 const DEFAULT_STAFF_ROLE_ID = "1534099901976416257";
 
@@ -66,15 +67,50 @@ module.exports = {
         await interaction.editReply({ embeds: [embed("error", "Ticket error", error.message || "Failed to create ticket. Try again.")] });
       }
     }
-    if (interaction.isButton() && ["ticket:claim", "ticket:close", "ticket:reopen", "ticket:delete"].includes(interaction.customId)) {
+    if (interaction.isButton() && ["ticket:claim", "Claim Ticket", "ticket:close", "ticket:reopen", "ticket:delete"].includes(interaction.customId)) {
       try {
         const settings = client.db.getGuildSettings(interaction.guildId).tickets;
         const staffRoleIds = settings.staffRoleIds?.length ? settings.staffRoleIds : (settings.staffRoleId ? [settings.staffRoleId] : []);
-        const isStaff = interaction.memberPermissions.has(PermissionFlagsBits.ManageChannels)
-          || staffRoleIds.some((roleId) => interaction.member?.roles?.cache?.has(roleId));
+        const effectiveStaffRoleIds = [...new Set([DEFAULT_STAFF_ROLE_ID, ...staffRoleIds.filter(Boolean)])];
+        const isStaff = interaction.memberPermissions?.has(PermissionFlagsBits.ManageChannels)
+          || effectiveStaffRoleIds.some((roleId) => interaction.member?.roles?.cache?.has(roleId));
         if (!isStaff) return interaction.reply({ embeds: [embed("error", "Staff only", "Only configured staff can manage tickets.")], ephemeral: true });
-        if (interaction.customId === "ticket:claim") {
-          await interaction.reply({ embeds: [embed("success", "Ticket claimed", `${interaction.user} is now handling this ticket.`)] });
+        if (interaction.customId === "ticket:claim" || interaction.customId === "Claim Ticket") {
+          const guildSettings = client.db.getGuildSettings(interaction.guildId);
+          const promotionState = guildSettings.promotion || { checkins: {}, ticketTotals: {} };
+          const previousCheckin = promotionState.checkins?.[interaction.channel.id];
+          if (!previousCheckin) {
+            if (!guildSettings.promotion) guildSettings.promotion = { checkins: {}, ticketTotals: {} };
+            if (!guildSettings.promotion.ticketTotals) guildSettings.promotion.ticketTotals = {};
+            if (!guildSettings.promotion.ticketTotals[interaction.user.id]) guildSettings.promotion.ticketTotals[interaction.user.id] = 0;
+            guildSettings.promotion.ticketTotals[interaction.user.id] += 1;
+
+            const nextState = getCheckinState({
+              ...promotionState,
+              staffMembers: new Set(promotionState.staffMembers || []),
+            }, { userId: interaction.user.id, roleId: effectiveStaffRoleIds[0] || DEFAULT_STAFF_ROLE_ID }, interaction.channel.id);
+
+            client.db.updateGuildSettings(interaction.guildId, (guildSettingsNext) => ({
+              ...guildSettingsNext,
+              promotion: {
+                ...(guildSettingsNext.promotion || {}),
+                checkins: nextState.checkins,
+                ticketTotals: nextState.ticketTotals,
+              },
+            }));
+            client.db.updateMetric(interaction.guildId, interaction.user.id, "tickets", 1);
+            const day = new Date().toISOString().slice(0, 10);
+            client.db.updateMetric(interaction.guildId, `${interaction.user.id}:${day}`, "tickets", 1);
+            await interaction.deferUpdate().catch(() => {});
+            const confirmation = await interaction.channel.send({
+              content: `✅ <@${interaction.user.id}>, you got check-in!`,
+              allowedMentions: { repliedUser: false },
+            }).catch(() => null);
+            if (confirmation) setTimeout(() => confirmation.delete().catch(() => {}), 1000);
+            return;
+          }
+
+          await interaction.deferUpdate().catch(() => {});
           return;
         }
         if (interaction.customId === "ticket:close") {

@@ -53,31 +53,44 @@ module.exports = {
 
     const ticketTopic = message.channel.topic || "";
     const ticketOwnerId = ticketTopic.match(/^ticket-owner:(\d+)$/)?.[1];
+    const isTicketLikeChannel = /ticket/i.test(message.channel.name || "");
     const configuredStaffRoleIds = settings.tickets?.staffRoleIds?.length ? settings.tickets.staffRoleIds : (settings.tickets?.staffRoleId ? [settings.tickets.staffRoleId] : []);
     const staffRoleIds = [...new Set([DEFAULT_STAFF_ROLE_ID, ...configuredStaffRoleIds.filter(Boolean)])];
     const memberStaffRoleId = staffRoleIds.find((roleId) => message.member?.roles?.cache?.has(roleId));
     const hasStaffRole = message.member && (message.member.permissions.has(PermissionFlagsBits.ManageChannels) || Boolean(memberStaffRoleId));
-    if (ticketOwnerId && hasStaffRole && message.author.id !== ticketOwnerId) {
-      const promotionState = settings.promotion || { checkins: {}, ticketTotals: {} };
-      const previousCheckin = promotionState.checkins?.[message.channel.id];
+    const promotionState = settings.promotion || { checkins: {}, ticketTotals: {} };
+    const previousCheckin = promotionState.checkins?.[message.channel.id];
+    const shouldCountFallback = hasStaffRole && !previousCheckin && (message.author.id !== ticketOwnerId || (isTicketLikeChannel && !ticketOwnerId));
+
+    if ((ticketOwnerId && hasStaffRole && message.author.id !== ticketOwnerId) || shouldCountFallback) {
       const nextState = getCheckinState({
         ...promotionState,
         staffMembers: new Set(promotionState.staffMembers || []),
       }, { userId: message.author.id, roleId: memberStaffRoleId || DEFAULT_STAFF_ROLE_ID }, message.channel.id);
 
       if (!previousCheckin && nextState.checkins?.[message.channel.id] === message.author.id) {
-        const currentCount = nextState.ticketTotals?.[message.author.id] || 1;
-        client.db.updateGuildSettings(message.guild.id, (guildSettings) => ({
-          ...guildSettings,
-          promotion: {
-            ...(guildSettings.promotion || {}),
-            checkins: nextState.checkins,
-            ticketTotals: nextState.ticketTotals,
-          },
-        }));
+        client.db.updateGuildSettings(message.guild.id, (currentGuildSettings) => {
+          const existingPromotion = currentGuildSettings.promotion || { checkins: {}, ticketTotals: {} };
+          return {
+            ...currentGuildSettings,
+            promotion: {
+              ...existingPromotion,
+              checkins: {
+                ...(existingPromotion.checkins || {}),
+                ...nextState.checkins
+              },
+              ticketTotals: {
+                ...(existingPromotion.ticketTotals || {}),
+                ...nextState.ticketTotals
+              }
+            }
+          };
+        });
         client.db.updateMetric(message.guild.id, message.author.id, "tickets", 1);
         const day = new Date().toISOString().slice(0, 10);
         client.db.updateMetric(message.guild.id, `${message.author.id}:${day}`, "tickets", 1);
+        const updatedGuildSettings = client.db.getGuildSettings(message.guild.id);
+        const currentCount = updatedGuildSettings.promotion?.ticketTotals?.[message.author.id] || 1;
         const confirmation = await message.reply({
           content: `${message.author} got check-in. This ticket is now counted for your check-ins (${currentCount}).`,
           allowedMentions: { repliedUser: false },

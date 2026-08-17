@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { render } = require('../src/welcome');
 const { clearAfk, setAfk } = require('../src/afk');
-const { evaluatePromoDemo, getCheckinState, getCheckinLeaderboard } = require('../src/services/promoDemoService');
+const { evaluatePromoDemo, getCheckinState, getCheckinLeaderboard, registerTicketCheckin } = require('../src/services/promoDemoService');
 
 test('disablegoodbye resolves the shared embed utility', () => {
   const command = require('../src/commands/configuration/disablegoodbye');
@@ -65,4 +65,13 @@ test('check-in leaderboard ranks staff by approved check-ins and caps at top 10'
 test('check-in leaderboard shows empty state when no check-ins exist', () => {
   const leaderboard = getCheckinLeaderboard({});
   assert.deepEqual(leaderboard, []);
+});
+
+test('ticket claims only count once per ticket channel and keep the first staff claim', () => {
+  const initial = { ticketTotals: {}, checkins: {}, staffMembers: new Set() };
+  const first = registerTicketCheckin(initial, { userId: 'u-1', roleId: '1534099901976416257' }, 'ticket-999');
+  const second = registerTicketCheckin(first, { userId: 'u-2', roleId: '1534099901976416257' }, 'ticket-999');
+  assert.equal(first.ticketTotals['u-1'], 1);
+  assert.equal(second.ticketTotals['u-2'], undefined);
+  assert.equal(second.checkins['ticket-999'], 'u-1');
 });
