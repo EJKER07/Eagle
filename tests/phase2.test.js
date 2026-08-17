@@ -2,8 +2,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { render } = require('../src/welcome');
 const { clearAfk, setAfk } = require('../src/afk');
-const { evaluatePromoDemo, getCheckinState, getCheckinLeaderboard, registerTicketCheckin, getRoleTarget } = require('../src/services/promoDemoService');
-const { buildPersonalPromoRequestEmbed } = require('../src/services/prefixCommandService');
+const { evaluatePromoDemo, getCheckinState, getCheckinLeaderboard, registerTicketCheckin, getRoleTarget, ROLE_TARGETS } = require('../src/services/promoDemoService');
+const { buildPersonalPromoRequestEmbed, resetStaffCheckinStats, resetAllStaffCheckins } = require('../src/services/prefixCommandService');
 
 test('disablegoodbye resolves the shared embed utility', () => {
   const command = require('../src/commands/configuration/disablegoodbye');
@@ -35,7 +35,7 @@ test('promoreq builds a personal promo-progress embed using the author metrics a
   const member = {
     id: 'u-99',
     user: { id: 'u-99', username: 'xjker' },
-    roles: { cache: [{ id: 'r-trial', name: 'Trial Staff' }] },
+    roles: { cache: [{ id: '1534099901976416257', name: 'Trial Staff' }] },
   };
   const guild = { id: 'g-1', name: 'XJKER CM' };
   const metrics = { messages: 600, tickets: 5 };
@@ -44,10 +44,12 @@ test('promoreq builds a personal promo-progress embed using the author metrics a
 
   assert.equal(target.role, 'Trial Staff');
   assert.equal(result.data.title, '❤️ XJKER CM Promo-demo ❤️');
-  assert.match(result.data.description, /@Trial Staff/);
+  assert.match(result.data.description, /<@&1534099901976416257>/);
+  assert.match(result.data.description, /<@&1534099902022549517>/);
   assert.match(result.data.fields[0].value, /Your Progress/);
   assert.match(result.data.fields[0].value, /600\/700/);
   assert.match(result.data.fields[1].value, /Current Est. Verdict/);
+  assert.match(result.data.fields[1].value, /Next Role/i);
   assert.match(result.data.fields[2].value, /Promotion/);
 });
 
@@ -95,4 +97,77 @@ test('ticket claims only count once per ticket channel and keep the first staff 
   assert.equal(first.ticketTotals['u-1'], 1);
   assert.equal(second.ticketTotals['u-2'], undefined);
   assert.equal(second.checkins['ticket-999'], 'u-1');
+});
+
+test('role targets include all seven custom staff roles in the exact hierarchy', () => {
+  assert.equal(ROLE_TARGETS.length, 7);
+  assert.deepEqual(ROLE_TARGETS.map((entry) => entry.roleId), [
+    '1534099901976416257',
+    '1534099902022549517',
+    '1534099902022549518',
+    '1534099902022549519',
+    '1538763624158470164',
+    '1538763818497478726',
+    '1534099902051647616',
+  ]);
+  assert.equal(ROLE_TARGETS[0].name, 'Trial Staff');
+  assert.equal(ROLE_TARGETS[6].name, 'Manager');
+  assert.equal(ROLE_TARGETS[6].nextRoleId, 'Max Level achieved!');
+});
+
+test('promoreq and promotion verdicts render the next role using role mentions and max-level wording', () => {
+  const member = {
+    id: 'u-99',
+    user: { id: 'u-99', username: 'xjker' },
+    roles: { cache: [{ id: '1534099901976416257', name: 'Trial Staff' }] },
+  };
+  const result = buildPersonalPromoRequestEmbed({ id: 'g-1', name: 'XJKER CM' }, member, { messages: 900, tickets: 11 });
+
+  assert.match(result.data.description, /<@&1534099901976416257>/);
+  assert.match(result.data.description, /<@&1534099902022549517>/);
+  assert.match(result.data.description, /<@&1534099902051647616>/);
+  assert.match(result.data.fields[1].value, /Next Role/i);
+  assert.match(result.data.fields[1].value, /<@&1534099902022549517>/);
+});
+
+test('resetstaff clears a single member promotion record and metric totals', () => {
+  const state = {
+    promotion: {
+      checkins: { 'ticket-1': 'u-1', 'ticket-2': 'u-2' },
+      ticketTotals: { 'u-1': 4, 'u-2': 2 },
+    },
+    members: {
+      'u-1': { metrics: { tickets: 4, checkins: 4 } },
+      'u-2': { metrics: { tickets: 2, checkins: 2 } },
+      'u-1:2026-08-17': { metrics: { tickets: 1, checkins: 1 } },
+    },
+  };
+
+  const next = resetStaffCheckinStats(state, 'u-1');
+
+  assert.equal(next.promotion.ticketTotals['u-1'], undefined);
+  assert.equal(next.promotion.checkins['ticket-1'], undefined);
+  assert.equal(next.members['u-1'].metrics.tickets, 0);
+  assert.equal(next.members['u-1'].metrics.checkins, 0);
+  assert.equal(next.members['u-1:2026-08-17'], undefined);
+});
+
+test('resetallstaff wipes out all promotion check-ins and ticket totals for the guild', () => {
+  const state = {
+    promotion: {
+      checkins: { 'ticket-1': 'u-1', 'ticket-2': 'u-2' },
+      ticketTotals: { 'u-1': 4, 'u-2': 2 },
+    },
+    members: {
+      'u-1': { metrics: { tickets: 4, checkins: 4 } },
+      'u-2': { metrics: { tickets: 2, checkins: 2 } },
+    },
+  };
+
+  const next = resetAllStaffCheckins(state);
+
+  assert.deepEqual(next.promotion.checkins, {});
+  assert.deepEqual(next.promotion.ticketTotals, {});
+  assert.equal(next.members['u-1'].metrics.tickets, 0);
+  assert.equal(next.members['u-2'].metrics.checkins, 0);
 });

@@ -1,12 +1,13 @@
 const DEFAULT_STAFF_ROLE_ID = "1534099901976416257";
 
 const ROLE_TARGETS = [
-  { role: "Trial Staff", messages: 700, tickets: 10 },
-  { role: "Staff", messages: 1000, tickets: 12 },
-  { role: "Trial Mod", messages: 1500, tickets: 14 },
-  { role: "Mod", messages: 2000, tickets: 16 },
-  { role: "Trial Admin", messages: 2500, tickets: 18 },
-  { role: "Other Higher Role", messages: 3000, tickets: 20 },
+  { roleId: "1534099901976416257", name: "Trial Staff", role: "Trial Staff", messages: 700, tickets: 10, nextRoleId: "1534099902022549517" },
+  { roleId: "1534099902022549517", name: "Staff", role: "Staff", messages: 1000, tickets: 12, nextRoleId: "1534099902022549518" },
+  { roleId: "1534099902022549518", name: "Junior Moderator", role: "Junior Moderator", messages: 1500, tickets: 14, nextRoleId: "1534099902022549519" },
+  { roleId: "1534099902022549519", name: "Senior Moderator", role: "Senior Moderator", messages: 2000, tickets: 16, nextRoleId: "1538763624158470164" },
+  { roleId: "1538763624158470164", name: "Trial Admin", role: "Trial Admin", messages: 2500, tickets: 18, nextRoleId: "1538763818497478726" },
+  { roleId: "1538763818497478726", name: "Admin", role: "Admin", messages: 3000, tickets: 20, nextRoleId: "1534099902051647616" },
+  { roleId: "1534099902051647616", name: "Manager", role: "Manager", messages: 4000, tickets: 25, nextRoleId: "Max Level achieved!" },
 ];
 
 function parseDateValue(raw) {
@@ -52,9 +53,21 @@ function parseDateRange(input) {
 
 function getRoleTarget(member) {
   if (!member || !member.roles || !member.roles.cache) return ROLE_TARGETS[0];
-  const matches = ROLE_TARGETS.filter((entry) => member.roles.cache.some((role) => role && (role.name === entry.role || String(role.id) === String(entry.role))));
+
+  const activeRoleIds = new Set(member.roles.cache.map((role) => String(role?.id || "")));
+  const matches = ROLE_TARGETS.filter((entry) => {
+    const hasRoleId = activeRoleIds.has(String(entry.roleId));
+    const hasRoleName = member.roles.cache.some((role) => role && String(role.name || "").toLowerCase() === String(entry.name || entry.role || "").toLowerCase());
+    return hasRoleId || hasRoleName;
+  });
+
   if (!matches.length) return ROLE_TARGETS[0];
-  return matches.reduce((best, current) => (current.messages > best.messages ? current : best), matches[0]);
+
+  return matches.reduce((best, current) => {
+    const bestIndex = ROLE_TARGETS.findIndex((entry) => String(entry.roleId) === String(best.roleId));
+    const currentIndex = ROLE_TARGETS.findIndex((entry) => String(entry.roleId) === String(current.roleId));
+    return currentIndex > bestIndex ? current : best;
+  }, matches[0]);
 }
 
 function evaluatePromoDemo(metrics, target = { requiredMessages: 1000, requiredTickets: 6 }) {
@@ -97,13 +110,18 @@ function evaluateRoleTarget(metrics, member) {
     demote: "demotion",
   }[result.status] || "stay";
 
+  const nextTarget = ROLE_TARGETS.find((entry) => String(entry.roleId) === String(target.nextRoleId)) || null;
+
   return {
     ...result,
     status: canonicalStatus,
     legacyStatus: result.status,
     targetMessages: target.messages,
     targetTickets: target.tickets,
-    role: target.role,
+    role: target.name || target.role,
+    roleId: target.roleId,
+    nextRoleId: target.nextRoleId || "Max Level achieved!",
+    nextRoleName: nextTarget ? nextTarget.name : (target.nextRoleId || "Max Level achieved!"),
     verdict: statusMap[result.status] || "⚠️ STAY",
   };
 }

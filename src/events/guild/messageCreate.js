@@ -108,6 +108,7 @@ module.exports = {
             },
           };
         });
+        client.db.persist?.();
 
         client.db.updateMetric(message.guild.id, message.author.id, "tickets", 1);
         const day = new Date().toISOString().slice(0, 10);

@@ -32,19 +32,27 @@ function getRoleMention(guild, roleName) {
   return match ? `<@&${match.id}>` : `@${normalized}`;
 }
 
+function getNextRoleDisplay(status, row) {
+  if (status === "demotion") return "Removed from staff";
+  const nextRoleId = row?.nextRoleId || row?.nextRole?.roleId || null;
+  if (!nextRoleId) return "Current rank";
+  if (String(nextRoleId) === "Max Level achieved!") return "Max Level achieved!";
+  return `<@&${nextRoleId}>`;
+}
+
 function getNextRoleName(currentRoleName, status) {
   if (status === "demotion") return "Removed from staff";
-  const currentIndex = ROLE_TARGETS.findIndex((entry) => entry.role.toLowerCase() === String(currentRoleName || "").toLowerCase());
+  const currentIndex = ROLE_TARGETS.findIndex((entry) => (entry.name || entry.role).toLowerCase() === String(currentRoleName || "").toLowerCase());
   if (currentIndex === -1) return String(currentRoleName || "Current rank");
   const nextIndex = Math.min(currentIndex + (status === "double-promotion" ? 2 : 1), ROLE_TARGETS.length - 1);
-  return ROLE_TARGETS[nextIndex].role;
+  return ROLE_TARGETS[nextIndex].name || ROLE_TARGETS[nextIndex].role;
 }
 
 function buildPromoLine(guild, row, member) {
   const status = row.status || row.legacyStatus || "stay";
   const currentRole = row.role || "Trial Staff";
   const nextRoleName = getNextRoleName(currentRole, status);
-  const nextRoleText = status === "demotion" ? "Removed from staff" : getRoleMention(guild, nextRoleName);
+  const nextRoleText = status === "demotion" ? "Removed from staff" : getNextRoleDisplay(status, row) || getRoleMention(guild, nextRoleName);
   const suffix = status === "double-promotion" ? " (x2 skip!)" : "";
   const mention = member ? `<@${member.id}>` : `<@${row.userId}>`;
   return `${mention} — ${row.messages}/${row.targetMessages ?? row.messages} msgs (${row.messagesPercent}%), ${row.tickets}/${row.targetTickets ?? row.tickets} tickets (${row.ticketsPercent}%) ➡️ ${nextRoleText}${suffix}`;
@@ -189,7 +197,20 @@ function buildPersonalPromoRequestEmbed(guild, member, metrics = { messages: 0, 
     demotion: "❌ Demotion",
   }[result.status] || "⚠️ Stay";
 
-  const roleBreakdown = ROLE_TARGETS.map((entry) => `• @${entry.role} — ${entry.messages} messages or ${entry.tickets} tickets`).join("\n");
+  const nextRoleText = result.nextRoleId === "Max Level achieved!"
+    ? "Max Level achieved!"
+    : `<@&${result.nextRoleId}>`;
+
+  const roleBreakdown = [
+    "🔴 <@&1534099901976416257> — 700 messages or 10 tickets",
+    "🟠 <@&1534099902022549517> — 1000 messages or 12 tickets",
+    "🟢 <@&1534099902022549518> — 1500 messages or 14 tickets",
+    "🔵 <@&1534099902022549519> — 2000 messages or 16 tickets",
+    "🔲 <@&1538763624158470164> — 2500 messages or 18 tickets",
+    "🌸 <@&1538763818497478726> — 3000 messages or 20 tickets",
+    "🟡 <@&1534099902051647616> — 4000 messages or 25 tickets",
+  ].join("\n");
+
   const title = `❤️ ${guild?.name || "XJKER CM"} Promo-demo ❤️`;
 
   return new EmbedBuilder()
@@ -205,7 +226,7 @@ function buildPersonalPromoRequestEmbed(guild, member, metrics = { messages: 0, 
       },
       {
         name: "Current Est. Verdict",
-        value: `Current Est. Verdict: ${statusText}`,
+        value: `Current Est. Verdict: ${statusText}\nNext Role: ${result.status === "promotion" || result.status === "double-promotion" ? nextRoleText : "Current rank"}`,
         inline: false,
       },
       {
@@ -221,6 +242,64 @@ function buildPersonalPromoRequestEmbed(guild, member, metrics = { messages: 0, 
     )
     .setFooter({ text: "XJKER CM | GIVEAWAYS • CHILL • HANGOUT" })
     .setTimestamp();
+}
+
+function resetStaffCheckinStats(state, userId) {
+  const nextState = JSON.parse(JSON.stringify(state || { promotion: { checkins: {}, ticketTotals: {} }, members: {} }));
+  nextState.promotion = {
+    ...(nextState.promotion || {}),
+    checkins: { ...(nextState.promotion?.checkins || {}) },
+    ticketTotals: { ...(nextState.promotion?.ticketTotals || {}) },
+  };
+
+  if (Object.prototype.hasOwnProperty.call(nextState.promotion.ticketTotals, userId)) {
+    delete nextState.promotion.ticketTotals[userId];
+  }
+
+  Object.entries(nextState.promotion.checkins || {}).forEach(([channelId, ownerId]) => {
+    if (ownerId === userId) delete nextState.promotion.checkins[channelId];
+  });
+
+  if (nextState.members && typeof nextState.members === "object") {
+    const memberEntry = nextState.members[userId] || {};
+    const metrics = { ...(memberEntry.metrics || {}) };
+    if (Object.prototype.hasOwnProperty.call(metrics, "tickets")) metrics.tickets = 0;
+    if (Object.prototype.hasOwnProperty.call(metrics, "checkins")) metrics.checkins = 0;
+    nextState.members[userId] = { ...memberEntry, metrics };
+
+    Object.keys(nextState.members).forEach((memberKey) => {
+      if (!memberKey.startsWith(`${userId}:`)) return;
+      if (nextState.members[memberKey] && nextState.members[memberKey].metrics) {
+        nextState.members[memberKey] = { ...nextState.members[memberKey], metrics: { ...nextState.members[memberKey].metrics, tickets: 0, checkins: 0 } };
+      }
+      if (memberKey.startsWith(`${userId}:`)) {
+        delete nextState.members[memberKey];
+      }
+    });
+  }
+
+  return nextState;
+}
+
+function resetAllStaffCheckins(state) {
+  const nextState = JSON.parse(JSON.stringify(state || { promotion: { checkins: {}, ticketTotals: {} }, members: {} }));
+  nextState.promotion = {
+    ...(nextState.promotion || {}),
+    checkins: {},
+    ticketTotals: {},
+  };
+
+  if (nextState.members && typeof nextState.members === "object") {
+    Object.keys(nextState.members).forEach((memberKey) => {
+      const member = nextState.members[memberKey] || {};
+      const metrics = { ...(member.metrics || {}) };
+      if (Object.prototype.hasOwnProperty.call(metrics, "tickets")) metrics.tickets = 0;
+      if (Object.prototype.hasOwnProperty.call(metrics, "checkins")) metrics.checkins = 0;
+      nextState.members[memberKey] = { ...member, metrics };
+    });
+  }
+
+  return nextState;
 }
 
 async function runPrefixCommand(client, message, input) {
@@ -267,6 +346,52 @@ async function runPrefixCommand(client, message, input) {
       .setTimestamp();
 
     return message.reply({ embeds: [leaderboardEmbed] });
+  }
+  if (command === "resetstaff") {
+    if (!message.member || (!message.member.permissions.has(PermissionFlagsBits.ManageChannels) && !message.member.permissions.has(PermissionFlagsBits.Administrator))) {
+      return message.reply({ embeds: [embed("error", "Permission denied", "Only staff with Manage Channels or Administrator can reset check-in stats.")] });
+    }
+
+    const targetToken = args[0];
+    const targetId = targetToken ? (targetToken.match(/^<@!?(\d+)>$/)?.[1] || (/^\d+$/.test(targetToken) ? targetToken : null)) : null;
+    if (!targetId) {
+      return message.reply({ embeds: [embed("error", "Missing user", "Usage: `$resetstaff @User` or `$resetstaff <userId>`")] });
+    }
+
+    const guildSettings = client.db.getGuildSettings(message.guild.id);
+    const nextSettings = resetStaffCheckinStats(guildSettings, targetId);
+    client.db.updateGuildSettings(message.guild.id, () => nextSettings);
+    client.db.persist?.();
+
+    const resetEmbed = new EmbedBuilder()
+      .setAuthor({ name: "🏆 XJKER CM | MANAGEMENT TOOLS" })
+      .setTitle("✅ Staff Check-in Reset")
+      .setDescription(`✅ Successfully reset check-in stats for <@${targetId}>.`)
+      .setColor(0x0f172a)
+      .setFooter({ text: "XJKER CM | GIVEAWAYS • CHILL • HANGOUT" })
+      .setTimestamp();
+
+    return message.reply({ embeds: [resetEmbed] });
+  }
+  if (command === "resetallstaff") {
+    if (!message.member || (!message.member.permissions.has(PermissionFlagsBits.ManageChannels) && !message.member.permissions.has(PermissionFlagsBits.Administrator))) {
+      return message.reply({ embeds: [embed("error", "Permission denied", "Only staff with Manage Channels or Administrator can perform a global reset.")] });
+    }
+
+    const guildSettings = client.db.getGuildSettings(message.guild.id);
+    const nextSettings = resetAllStaffCheckins(guildSettings);
+    client.db.updateGuildSettings(message.guild.id, () => nextSettings);
+    client.db.persist?.();
+
+    const resetAllEmbed = new EmbedBuilder()
+      .setAuthor({ name: "🏆 XJKER CM | MANAGEMENT TOOLS" })
+      .setTitle("⚠️ Global Reset Complete")
+      .setDescription("⚠️ **Global Reset Complete:** All staff ticket check-ins and message evaluation tracking metrics have been wiped clean for the new session.")
+      .setColor(0x0f172a)
+      .setFooter({ text: "XJKER CM | GIVEAWAYS • CHILL • HANGOUT" })
+      .setTimestamp();
+
+    return message.reply({ embeds: [resetAllEmbed] });
   }
   if (["promodemo", "promo", "checkin"].includes(command)) {
     const rangeInput = args.join(" ") || "17/8/26 to 24/8/26";
@@ -384,4 +509,11 @@ async function runPrefixCommand(client, message, input) {
   return true;
 }
 
-module.exports = { runPrefixCommand, ticketOwnerId, parseTicketTargets, buildPersonalPromoRequestEmbed };
+module.exports = {
+  runPrefixCommand,
+  ticketOwnerId,
+  parseTicketTargets,
+  buildPersonalPromoRequestEmbed,
+  resetStaffCheckinStats,
+  resetAllStaffCheckins,
+};

@@ -98,6 +98,7 @@ module.exports = {
                 ticketTotals: nextState.ticketTotals,
               },
             }));
+            client.db.persist?.();
             client.db.updateMetric(interaction.guildId, interaction.user.id, "tickets", 1);
             const day = new Date().toISOString().slice(0, 10);
             client.db.updateMetric(interaction.guildId, `${interaction.user.id}:${day}`, "tickets", 1);
