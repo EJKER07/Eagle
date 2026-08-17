@@ -11,8 +11,8 @@ test('help exposes categories and navigation views', () => {
   assert.equal(help.navigation()[0].components.length, 2);
 });
 
-test('command embed headings are uppercase', () => {
-  assert.equal(embed('info', 'Snipe', 'No deleted message is currently cached.').data.title, 'SNIPE');
+test('command embed headings use title case', () => {
+  assert.equal(embed('info', 'Snipe', 'No deleted message is currently cached.').data.title, 'Snipe');
 });
 
 test('level progression uses the requested random thresholds', () => {

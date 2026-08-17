@@ -75,6 +75,10 @@ function persist() {
 }
 
 function getGuild(guildId) {
+  if (!guildId || typeof guildId !== "string") {
+    console.error("Invalid guildId provided to getGuild():", guildId);
+    throw new Error("Invalid guildId provided to getGuild()");
+  }
   if (!state.guilds[guildId]) {
     state.guilds[guildId] = merge(guildDefaults, { createdAt: new Date().toISOString() });
     persist();
@@ -83,6 +87,14 @@ function getGuild(guildId) {
 }
 
 function updateGuild(guildId, updater) {
+  if (!guildId || typeof guildId !== "string") {
+    console.error("Invalid guildId provided to updateGuild():", guildId);
+    throw new Error("Invalid guildId provided to updateGuild()");
+  }
+  if (typeof updater !== "function" && typeof updater !== "object") {
+    console.error("Invalid updater provided to updateGuild()");
+    throw new Error("Invalid updater provided to updateGuild()");
+  }
   const current = getGuild(guildId);
   const next = typeof updater === "function" ? updater(clone(current)) : { ...current, ...updater };
   state.guilds[guildId] = next;

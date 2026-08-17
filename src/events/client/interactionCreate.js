@@ -59,40 +59,57 @@ module.exports = {
       }
     }
     if (interaction.isButton() && ["ticket:claim", "ticket:close", "ticket:reopen", "ticket:delete"].includes(interaction.customId)) {
-      const settings = client.db.getGuildSettings(interaction.guildId).tickets;
-      const staffRoleIds = settings.staffRoleIds?.length ? settings.staffRoleIds : (settings.staffRoleId ? [settings.staffRoleId] : []);
-      const isStaff = interaction.memberPermissions.has(PermissionFlagsBits.ManageChannels)
-        || staffRoleIds.some((roleId) => interaction.member.roles.cache.has(roleId));
-      if (!isStaff) return interaction.reply({ embeds: [embed("error", "Staff only", "Only configured staff can manage tickets.")], ephemeral: true });
-      if (interaction.customId === "ticket:claim") {
-        await interaction.reply({ embeds: [embed("success", "Ticket claimed", `${interaction.user} is now handling this ticket.`)] });
-        return;
+      try {
+        const settings = client.db.getGuildSettings(interaction.guildId).tickets;
+        const staffRoleIds = settings.staffRoleIds?.length ? settings.staffRoleIds : (settings.staffRoleId ? [settings.staffRoleId] : []);
+        const isStaff = interaction.memberPermissions.has(PermissionFlagsBits.ManageChannels)
+          || staffRoleIds.some((roleId) => interaction.member?.roles?.cache?.has(roleId));
+        if (!isStaff) return interaction.reply({ embeds: [embed("error", "Staff only", "Only configured staff can manage tickets.")], ephemeral: true });
+        if (interaction.customId === "ticket:claim") {
+          await interaction.reply({ embeds: [embed("success", "Ticket claimed", `${interaction.user} is now handling this ticket.`)] });
+          return;
+        }
+        if (interaction.customId === "ticket:close") {
+          await interaction.channel.permissionOverwrites.edit(interaction.channel.topic?.match(/ticket-owner:(\d+)/)?.[1] || interaction.user.id, { SendMessages: false });
+          return interaction.update({ embeds: [embed("warning", "Ticket closed", "This ticket is now read-only.")], components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("ticket:reopen").setLabel("Reopen").setStyle(ButtonStyle.Success).setEmoji("🔓"), new ButtonBuilder().setCustomId("ticket:delete").setLabel("Delete").setStyle(ButtonStyle.Danger).setEmoji("🗑️"))] });
+        }
+        if (interaction.customId === "ticket:reopen") {
+          const ownerId = interaction.channel.topic?.match(/ticket-owner:(\d+)/)?.[1];
+          if (ownerId) await interaction.channel.permissionOverwrites.edit(ownerId, { SendMessages: true });
+          return interaction.update({ embeds: [embed("success", "Ticket reopened", "The ticket is writable again.")], components: [] });
+        }
+        const logId = settings.logChannelId || settings.logging?.tickets;
+        const logChannel = logId ? interaction.guild.channels.cache.get(logId) : null;
+        if (logChannel?.isTextBased()) await logChannel.send({ content: `Transcript for ${interaction.channel}:`, files: [await createTranscript(interaction.channel, { limit: -1, filename: `${interaction.channel.name}.html` })] });
+        await interaction.reply({ embeds: [embed("error", "Deleting ticket", "This channel will be deleted in 5 seconds.")], components: [] });
+        setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
+      } catch (error) {
+        console.error("Ticket button error:", error);
+        const response = { embeds: [embed("error", "Error", error.message || "An error occurred.")], ephemeral: true };
+        if (interaction.replied || interaction.deferred) await interaction.followUp(response).catch(() => {});
+        else await interaction.reply(response).catch(() => {});
       }
-      if (interaction.customId === "ticket:close") {
-        await interaction.channel.permissionOverwrites.edit(interaction.channel.topic?.match(/ticket-owner:(\d+)/)?.[1] || interaction.user.id, { SendMessages: false });
-        return interaction.update({ embeds: [embed("warning", "Ticket closed", "This ticket is now read-only.")], components: [new ActionRowBuilder().addComponents(new ButtonBuilder().setCustomId("ticket:reopen").setLabel("Reopen").setStyle(ButtonStyle.Success).setEmoji("🔓"), new ButtonBuilder().setCustomId("ticket:delete").setLabel("Delete").setStyle(ButtonStyle.Danger).setEmoji("🗑️"))] });
-      }
-      if (interaction.customId === "ticket:reopen") {
-        const ownerId = interaction.channel.topic?.match(/ticket-owner:(\d+)/)?.[1];
-        if (ownerId) await interaction.channel.permissionOverwrites.edit(ownerId, { SendMessages: true });
-        return interaction.update({ embeds: [embed("success", "Ticket reopened", "The ticket is writable again.")], components: [] });
-      }
-      const logId = settings.logChannelId || settings.logging?.tickets;
-      const logChannel = logId ? interaction.guild.channels.cache.get(logId) : null;
-      if (logChannel?.isTextBased()) await logChannel.send({ content: `Transcript for ${interaction.channel}:`, files: [await createTranscript(interaction.channel, { limit: -1, filename: `${interaction.channel.name}.html` })] });
-      await interaction.reply({ embeds: [embed("error", "Deleting ticket", "This channel will be deleted in 5 seconds.")], components: [] });
-      setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
     }
     if (interaction.isButton() && interaction.customId.startsWith("afk:dm-toggle:")) {
-      const ownerId = interaction.customId.split(":")[2];
-      if (ownerId !== interaction.user.id) return interaction.reply({ content: "Only the AFK owner can change this setting.", ephemeral: true });
-      const current = client.db.getAfk(interaction.guildId, ownerId);
-      if (!current) return interaction.reply({ content: "Your AFK status has already been cleared.", ephemeral: true });
-      client.db.setAfkDmOnMention(interaction.guildId, ownerId, !current.dmOnMention);
-      await interaction.reply({ content: `Mention DMs ${current.dmOnMention ? "disabled" : "enabled"}.`, ephemeral: true });
+      try {
+        const ownerId = interaction.customId.split(":")[2];
+        if (ownerId !== interaction.user.id) return interaction.reply({ content: "Only the AFK owner can change this setting.", ephemeral: true });
+        const current = client.db.getAfk(interaction.guildId, ownerId);
+        if (!current) return interaction.reply({ content: "Your AFK status has already been cleared.", ephemeral: true });
+        client.db.setAfkDmOnMention(interaction.guildId, ownerId, !current.dmOnMention);
+        await interaction.reply({ content: `Mention DMs ${current.dmOnMention ? "disabled" : "enabled"}.`, ephemeral: true });
+      } catch (error) {
+        console.error("AFK toggle error:", error);
+        await interaction.reply({ content: "An error occurred.", ephemeral: true }).catch(() => {});
+      }
     }
     if (interaction.isButton() && interaction.customId.startsWith("poll:")) {
-      await interaction.reply({ embeds: [embed("success", "Vote recorded", "Your vote has been recorded.")], ephemeral: true });
+      try {
+        await interaction.reply({ embeds: [embed("success", "Vote recorded", "Your vote has been recorded.")], ephemeral: true });
+      } catch (error) {
+        console.error("Poll button error:", error);
+        await interaction.reply({ content: "An error occurred.", ephemeral: true }).catch(() => {});
+      }
     }
   },
 };

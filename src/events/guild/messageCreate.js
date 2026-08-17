@@ -83,7 +83,7 @@ module.exports = {
     const totalXp = (row?.xp || 0) + gainedXp;
     const nextLevelInfo = getLevelInfo(totalXp, `${message.guild.id}:${message.author.id}`);
 
-    client.db.setLevel(message.guild.id, message.author.id, { xp: totalXp, level: nextLevelInfo.level, lastXpAt: Date.now() });
+    client.db.setLevel(message.guild.id, message.author.id, { xp: totalXp, level: Math.max(nextLevelInfo.level, previousLevel), lastXpAt: Date.now() });
     if (nextLevelInfo.level > previousLevel) {
       const announcementChannel = leveling.announcementChannelId
         ? message.guild.channels.cache.get(leveling.announcementChannelId) || message.guild.channels.resolve(leveling.announcementChannelId)

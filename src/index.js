@@ -43,9 +43,13 @@ if (!token) {
   client.voiceManager = new VoiceConnectionManager(client);
   client.audioMonitor = new AudioStreamMonitor(client);
 
-  process.on("unhandledRejection", (error) => console.error("Unhandled rejection", error));
+  process.on("unhandledRejection", (error) => {
+    console.error("[UNHANDLED REJECTION]", error?.message || error);
+    if (error?.stack) console.error(error.stack);
+  });
   process.on("uncaughtException", (error) => {
-    console.error("Uncaught exception", error);
+    console.error("[UNCAUGHT EXCEPTION]", error?.message || error);
+    if (error?.stack) console.error(error.stack);
   });
 
   client.login(token).catch((error) => {
