@@ -113,12 +113,19 @@ async function runLoadedPrefixCommand(client, message, input) {
   const command = client.commands.get(tokens[0]?.toLowerCase());
   if (!command) return false;
   if (command.permissions?.length && !message.member.permissions.has(command.permissions)) {
-    await message.reply({ embeds: [embed("error", "Permission denied", "You do not have permission to use this command.")] });
+    const reply = await message.reply({ embeds: [embed("error", "Permission denied", "You do not have permission to use this command.")] });
+    setTimeout(() => reply.delete().catch(() => {}), 3000);
     return true;
   }
-  const interaction = await createPrefixInteraction(client, message, command, input.slice(tokens[0].length).trim());
-  await command.execute(interaction, client);
-  return true;
+  try {
+    const interaction = await createPrefixInteraction(client, message, command, input.slice(tokens[0].length).trim());
+    await command.execute(interaction, client);
+    return true;
+  } catch (error) {
+    const reply = await message.reply({ embeds: [embed("error", "Command failed", error.message || "Something went wrong.")] }).catch(() => null);
+    if (reply) setTimeout(() => reply.delete().catch(() => {}), 3000);
+    return true;
+  }
 }
 
 function ticketOwnerId(channel) {
@@ -138,24 +145,52 @@ function isTicket(message) {
   return Boolean(ticketOwnerId(message.channel));
 }
 
+function parseTicketTargets(message) {
+  const ids = new Set();
+  for (const user of message.mentions?.users?.values?.() || []) ids.add(user.id);
+  for (const role of message.mentions?.roles?.values?.() || []) ids.add(role.id);
+  return [...ids];
+}
+
 async function runPrefixCommand(client, message, input) {
   const [rawCommand, ...args] = tokenize(input);
   if (!rawCommand) return false;
   const command = rawCommand.toLowerCase();
   const settings = client.db.getGuildSettings(message.guild.id).tickets;
   if (command === "ticket" || command === "tickets") {
-    return message.reply({ embeds: [embed("ticket", "Ticket commands", "`$close` `$reopen` `$rename <name>` `$claim` `$add @user` `$remove @user` `$delete`\nUse these inside a ticket channel.")] });
+    return message.reply({ embeds: [embed("ticket", "Ticket commands", "`$close` `$reopen` `$rename <name>` `$claim` `$add @user @role` `$remove @user @role` `$delete`\nUse these inside a ticket channel.")] });
   }
   if (![
     "close", "reopen", "rename", "claim", "add", "remove", "delete",
   ].includes(command)) return runLoadedPrefixCommand(client, message, input);
-  if (!isTicket(message)) return message.reply({ embeds: [embed("error", "Ticket only", "This command can only be used inside a ticket channel.")] });
+  if (!isTicket(message)) {
+    const reply = await message.reply({ embeds: [embed("error", "Ticket only", "This command can only be used inside a ticket channel.")] });
+    setTimeout(() => reply.delete().catch(() => {}), 3000);
+    return true;
+  }
   const ownerId = ticketOwnerId(message.channel);
   const staff = isStaff(message, settings);
-  if (!staff && message.author.id !== ownerId) return message.reply({ embeds: [embed("error", "Staff only", "Only the ticket owner or configured staff can use this command.")] });
+  if (!staff && message.author.id !== ownerId) {
+    const reply = await message.reply({ embeds: [embed("error", "Staff only", "Only the ticket owner or configured staff can use this command.")] });
+    setTimeout(() => reply.delete().catch(() => {}), 3000);
+    return true;
+  }
 
   if (["reopen", "rename", "claim", "add", "remove", "delete"].includes(command) && !staff) {
-    return message.reply({ embeds: [embed("error", "Staff only", "Only configured staff can use this ticket command.")] });
+    const reply = await message.reply({ embeds: [embed("error", "Staff only", "Only configured staff can use this ticket command.")] });
+    setTimeout(() => reply.delete().catch(() => {}), 3000);
+    return true;
+  }
+
+  if (command === "rename") {
+    const name = args.join("-").toLowerCase().replace(/[^a-z0-9-]/g, "").replace(/-{2,}/g, "-").slice(0, 80);
+    if (!name) {
+      const reply = await message.reply({ embeds: [embed("error", "Missing name", `Usage: \`${client.config.prefix}rename <name>\``)] });
+      setTimeout(() => reply.delete().catch(() => {}), 3000);
+      return true;
+    }
+    await message.channel.setName(name);
+    return message.reply({ embeds: [embed("success", "Ticket renamed", `This ticket is now **${name}**.`)] });
   }
   if (command === "close") {
     await message.channel.permissionOverwrites.edit(ownerId, { SendMessages: false });
@@ -165,23 +200,25 @@ async function runPrefixCommand(client, message, input) {
     await message.channel.permissionOverwrites.edit(ownerId, { SendMessages: true });
     return message.reply({ embeds: [embed("success", "Ticket reopened", "The ticket is writable again.")] });
   }
-  if (command === "rename") {
-    const name = args.join("-").toLowerCase().replace(/[^a-z0-9-]/g, "").replace(/-{2,}/g, "-").slice(0, 80);
-    if (!name) return message.reply({ embeds: [embed("error", "Missing name", `Usage: \`${client.config.prefix}rename <name>\``)] });
-    await message.channel.setName(name);
-    return message.reply({ embeds: [embed("success", "Ticket renamed", `This ticket is now **${name}**.`)] });
-  }
   if (command === "claim") {
     await message.channel.permissionOverwrites.edit(message.author.id, { ViewChannel: true, SendMessages: true, ReadMessageHistory: true });
     return message.reply({ embeds: [embed("success", "Ticket claimed", `${message.author} is now handling this ticket.`)] });
   }
   if (command === "add" || command === "remove") {
-    const member = message.mentions.members.first();
-    if (!member) return message.reply({ embeds: [embed("error", "Missing member", `Usage: \`${client.config.prefix}${command} @user\``)] });
-    await message.channel.permissionOverwrites.edit(member.id, command === "add"
+    const targetIds = parseTicketTargets(message);
+    if (!targetIds.length) {
+      const reply = await message.reply({ embeds: [embed("error", "Missing mention", `Usage: \`${client.config.prefix}${command} @user @role\``)] });
+      setTimeout(() => reply.delete().catch(() => {}), 3000);
+      return true;
+    }
+    const action = command === "add"
       ? { ViewChannel: true, SendMessages: true, ReadMessageHistory: true }
-      : { ViewChannel: false });
-    return message.reply({ embeds: [embed("success", `Member ${command === "add" ? "added" : "removed"}`, `${member} was ${command === "add" ? "added to" : "removed from"} this ticket.`)] });
+      : { ViewChannel: false };
+    for (const targetId of targetIds) {
+      await message.channel.permissionOverwrites.edit(targetId, action).catch(() => {});
+    }
+    const summary = targetIds.map((targetId) => `<@${targetId}>`).join(", ");
+    return message.reply({ embeds: [embed("success", `Member ${command === "add" ? "added" : "removed"}`, `${summary} was ${command === "add" ? "added to" : "removed from"} this ticket.`)] });
   }
   const logId = settings.logChannelId || settings.logging?.tickets;
   const logChannel = logId ? message.guild.channels.cache.get(logId) : null;
@@ -191,4 +228,4 @@ async function runPrefixCommand(client, message, input) {
   return true;
 }
 
-module.exports = { runPrefixCommand, ticketOwnerId };
+module.exports = { runPrefixCommand, ticketOwnerId, parseTicketTargets };
