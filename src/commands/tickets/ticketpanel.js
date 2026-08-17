@@ -7,7 +7,17 @@ module.exports = {
   async execute(interaction, client) {
     const channel = interaction.options.getChannel("channel") || interaction.channel;
     if (channel.type !== ChannelType.GuildText) throw new Error("Choose a text channel.");
-    client.db.updateGuildSettings(interaction.guildId, (settings) => ({ ...settings, tickets: { ...settings.tickets, enabled: true } }));
+    client.db.updateGuildSettings(interaction.guildId, (settings) => {
+      const staffRoleIds = settings.tickets?.staffRoleIds?.length ? settings.tickets.staffRoleIds : (settings.tickets?.staffRoleId ? [settings.tickets.staffRoleId] : []);
+      return {
+        ...settings,
+        tickets: {
+          ...settings.tickets,
+          enabled: true,
+          staffRoleIds,
+        },
+      };
+    });
     const categories = [
       ["Ltc rewards", "ltc", "ltc"],
       ["Nitro/Deco rewards", "nitro", "nitro-deco"],

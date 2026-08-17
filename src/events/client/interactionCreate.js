@@ -15,7 +15,13 @@ module.exports = {
     if (interaction.isStringSelectMenu() && interaction.customId === "ticket:create") {
       try {
         await interaction.deferReply({ ephemeral: true });
-        const settings = client.db.getGuildSettings(interaction.guildId).tickets;
+        const rawSettings = client.db.getGuildSettings(interaction.guildId).tickets;
+        const roleIds = rawSettings.staffRoleIds?.length ? rawSettings.staffRoleIds : (rawSettings.staffRoleId ? [rawSettings.staffRoleId] : []);
+        const settings = {
+          ...rawSettings,
+          enabled: rawSettings.enabled || roleIds.length > 0,
+          staffRoleIds: roleIds,
+        };
         if (!settings.enabled) {
           return interaction.editReply({ embeds: [embed("error", "Tickets disabled", "Tickets are disabled in this server.")] });
         }
@@ -27,8 +33,7 @@ module.exports = {
           { id: interaction.guild.roles.everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
           { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] },
         ];
-        const staffRoleIds = settings.staffRoleIds?.length ? settings.staffRoleIds : (settings.staffRoleId ? [settings.staffRoleId] : []);
-        for (const roleId of staffRoleIds) {
+        for (const roleId of settings.staffRoleIds) {
           if (roleId) overwrites.push({ id: roleId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] });
         }
         const selectedValue = interaction.values[0];
