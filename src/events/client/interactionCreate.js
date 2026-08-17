@@ -47,10 +47,10 @@ module.exports = {
         const channel = await interaction.guild.channels.create({ name: channelName, type: ChannelType.GuildText, topic: `ticket-owner:${interaction.user.id}`, parent: settings.categoryId || undefined, permissionOverwrites: overwrites });
         const ticketImageUrl = client.config.ticket.imageUrl || "https://i.ibb.co/BVsB4CS4/382ad2dd02dd701a813c189ec01be1d3.jpg";
         const ticketEmbed = new EmbedBuilder()
-          .setColor(0xf4df1b)
+          .setColor(0x0f172a)
           .setAuthor({ name: "Eagle Premium", iconURL: "https://cdn.discordapp.com/attachments/1536749083912306690/1538405479590531162/eagle.png?ex=6a828f40&is=6a813dc0&hm=0c74e9ab9a3da10f3c614ed2d08008c36cf472606041377e7d276a1e7b640e8e&" })
           .setTitle(`${categoryName.toUpperCase()} TICKET`)
-          .setDescription(`**Welcome** ${interaction.user}\n**Category:** ${categoryName}\n\nOur support team will assist you shortly.`)
+          .setDescription(`Welcome ${interaction.user}\nCategory: ${categoryName}\n\nOur support team will assist you shortly.`)
           .setThumbnail(interaction.user.displayAvatarURL({ size: 256 }))
           .setImage(ticketImageUrl)
           .setFooter({ text: "Eagle Premium • server tools" })
