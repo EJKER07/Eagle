@@ -62,13 +62,11 @@ module.exports = {
     const staffMention = rolesToGrantAccess.map((role) => role.toString()).join(" ");
 
     const welcomeEmbed = new EmbedBuilder()
-      .setColor(0x5865f2)
-      .setTitle("Support Ticket")
-      .setDescription(
-        `Thanks for contacting support, ${interaction.user}.\n\n` +
-          `Reason: ${reason}\n\n` +
-          `${staffMention} will assist you shortly.`,
-      )
+      .setColor(0x0f172a)
+      .setAuthor({ name: "🏆 XJKER CM | MANAGEMENT TOOLS" })
+      .setTitle("GENERAL SUPPORT TICKET")
+      .setDescription("Welcome to XJKER CM Support Network.\nOur active support team will assist you shortly.")
+      .setFooter({ text: "XJKER CM | GIVEAWAYS • CHILL • HANGOUT" })
       .setTimestamp();
 
     await channel.send({

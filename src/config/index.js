@@ -5,8 +5,10 @@ const root = path.resolve(__dirname, "../..");
 module.exports = {
   brand: {
     name: "XJKER CM",
-    color: 0xf4df1b,
-    colors: { success: 0xf4df1b, error: 0xed4245, warning: 0xf4df1b, neutral: 0xf4df1b },
+    author: "🏆 XJKER CM | MANAGEMENT TOOLS",
+    footer: "XJKER CM | GIVEAWAYS • CHILL • HANGOUT",
+    color: 0x0f172a,
+    colors: { success: 0x2ec4b6, error: 0xe63946, warning: 0xffb703, neutral: 0x0f172a },
   },
   prefix: process.env.BOT_PREFIX || "$",
   ownerId: process.env.BOT_OWNER_ID || process.env.OWNER_ID || "1496490310589481030",

@@ -32,7 +32,7 @@ module.exports = {
     const menu = new StringSelectMenuBuilder().setCustomId("ticket:create").setPlaceholder(`${emoji("ticket")} Select a category to create a ticket...`).addOptions(
       categories.map(([name, icon, value]) => ({ label: name, value, emoji: componentEmoji(icon) })),
     );
-    const panelEmbed = embed("ticket", "Support Tickets", "Select a category to create a support ticket");
+    const panelEmbed = embed("ticket", "GENERAL SUPPORT TICKET", "Welcome to XJKER CM Support Network.\nOur active support team will assist you shortly.");
     if (client.config.ticket.panelImageUrl) panelEmbed.setThumbnail(client.config.ticket.panelImageUrl);
     await channel.send({ embeds: [panelEmbed], components: [new ActionRowBuilder().addComponents(menu)] });
     await interaction.reply({ embeds: [embed("success", "Ticket panel posted", `Panel sent to ${channel}.`)], ephemeral: true });

@@ -4,7 +4,7 @@ const { embed } = require("../../utils/embeds");
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("setup")
-    .setDescription("Configure an Eagle Premium module for this server.")
+    .setDescription("Configure an XJKER CM module for this server.")
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addStringOption((option) => option.setName("module").setDescription("Module to configure").setRequired(true).addChoices(
       { name: "Welcome", value: "welcome" }, { name: "Goodbye", value: "goodbye" }, { name: "Tickets", value: "tickets" },

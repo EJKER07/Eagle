@@ -1,7 +1,7 @@
 const { PermissionFlagsBits, EmbedBuilder, Colors } = require("discord.js");
 const { createTranscript } = require("discord-html-transcripts");
 const { embed } = require("../utils/embeds");
-const { getPromotionReport, evaluateRoleTarget, ROLE_TARGETS, getCheckinLeaderboard } = require("./promoDemoService");
+const { getPromotionReport, evaluateRoleTarget, getRoleTarget, ROLE_TARGETS, getCheckinLeaderboard, getUserMetricsUpToDate } = require("./promoDemoService");
 
 function tokenize(input) {
   return input.match(/(?:[^\s"]+|"[^"]*")+/g)?.map((token) => token.replace(/^"|"$/g, "")) || [];
@@ -178,6 +178,51 @@ function parseTicketTargets(message) {
   return [...ids];
 }
 
+function buildPersonalPromoRequestEmbed(guild, member, metrics = { messages: 0, tickets: 0 }) {
+  const authorMember = member || { id: "unknown", roles: { cache: [] } };
+  const target = getRoleTarget(authorMember);
+  const result = evaluateRoleTarget({ messages: Number(metrics.messages || 0), tickets: Number(metrics.tickets || 0) }, authorMember);
+  const statusText = {
+    "double-promotion": "✨ Double Promotion",
+    promotion: "✅ Promotion",
+    stay: "⚠️ Stay",
+    demotion: "❌ Demotion",
+  }[result.status] || "⚠️ Stay";
+
+  const roleBreakdown = ROLE_TARGETS.map((entry) => `• @${entry.role} — ${entry.messages} messages or ${entry.tickets} tickets`).join("\n");
+  const title = `❤️ ${guild?.name || "XJKER CM"} Promo-demo ❤️`;
+
+  return new EmbedBuilder()
+    .setAuthor({ name: "🏆 XJKER CM | MANAGEMENT TOOLS" })
+    .setTitle(title)
+    .setDescription(roleBreakdown)
+    .setColor(0x0f172a)
+    .addFields(
+      {
+        name: "Your Progress",
+        value: `Your Progress: ${result.messages}/${target.messages} Messages (${result.messagesPercent}%) | ${result.tickets}/${target.tickets} Tickets (${result.ticketsPercent}%)`,
+        inline: false,
+      },
+      {
+        name: "Current Est. Verdict",
+        value: `Current Est. Verdict: ${statusText}`,
+        inline: false,
+      },
+      {
+        name: "How it works",
+        value: [
+          "✅ Promotion — reach 100% of either requirement (or clear 50% on both messages and tickets)",
+          "ℹ️ Double Promotion — reach 200% of either requirement to skip a rank",
+          "⚠️ Stay — reach at least 50% of either requirement",
+          "❌ Demotion — fall below 50% on both",
+        ].join("\n"),
+        inline: false,
+      },
+    )
+    .setFooter({ text: "XJKER CM | GIVEAWAYS • CHILL • HANGOUT" })
+    .setTimestamp();
+}
+
 async function runPrefixCommand(client, message, input) {
   const [rawCommand, ...args] = tokenize(input);
   if (!rawCommand) return false;
@@ -186,14 +231,23 @@ async function runPrefixCommand(client, message, input) {
   if (command === "ticket" || command === "tickets") {
     return message.reply({ embeds: [embed("ticket", "Ticket commands", "`$close` `$reopen` `$rename <name>` `$claim` `$add @user @role` `$remove @user @role` `$delete`\nUse these inside a ticket channel.")] });
   }
+  if (command === "promoreq") {
+    const guildSettings = client.db.getGuildSettings(message.guild.id);
+    const member = message.member || message.guild.members.cache.get(message.author.id) || { id: message.author.id, roles: { cache: [] } };
+    const metrics = getUserMetricsUpToDate(guildSettings.members || {}, message.author.id, new Date());
+    const embed = buildPersonalPromoRequestEmbed(message.guild, member, metrics);
+    return message.reply({ embeds: [embed] });
+  }
   if (command === "checkinlb") {
     const leaderboard = getCheckinLeaderboard(client.db.getGuildSettings(message.guild.id).promotion?.ticketTotals || {}, 10);
-    const title = `🏆 Check-in Leaderboard — ${message.guild.name}`;
+    const title = "🏆 Check-in Leaderboard — XJKER CM | GIVEAWAYS • CHILL • HANGOUT";
     if (!leaderboard.length) {
       const emptyEmbed = new EmbedBuilder()
+        .setAuthor({ name: "🏆 XJKER CM | MANAGEMENT TOOLS" })
         .setTitle(title)
         .setDescription("No approved check-ins recorded yet.")
-        .setColor(Colors.Yellow)
+        .setColor(0x0f172a)
+        .setFooter({ text: "XJKER CM | GIVEAWAYS • CHILL • HANGOUT" })
         .setTimestamp();
       return message.reply({ embeds: [emptyEmbed] });
     }
@@ -205,9 +259,11 @@ async function runPrefixCommand(client, message, input) {
     }).join("\n");
 
     const leaderboardEmbed = new EmbedBuilder()
+      .setAuthor({ name: "🏆 XJKER CM | MANAGEMENT TOOLS" })
       .setTitle(title)
       .setDescription(lines)
-      .setColor(Colors.Gold)
+      .setColor(0x0f172a)
+      .setFooter({ text: "XJKER CM | GIVEAWAYS • CHILL • HANGOUT" })
       .setTimestamp();
 
     return message.reply({ embeds: [leaderboardEmbed] });
@@ -246,15 +302,16 @@ async function runPrefixCommand(client, message, input) {
     };
 
     const promoEmbed = new EmbedBuilder()
+      .setAuthor({ name: "🏆 XJKER CM | MANAGEMENT TOOLS" })
       .setTitle("XJKER CM • Staff Promotion Report")
       .setDescription(`Period: ${report.startText} — ${report.endText} • ${evaluatedRows.length} member(s) evaluated`)
-      .setColor(Colors.Green)
+      .setColor(0x0f172a)
       .addFields(
         buildSection("Promotions", "🟢", grouped.promotions),
         buildSection("Stay", "⚠️", grouped.stay),
         buildSection("Demotions", "❌", grouped.demotions)
       )
-      .setFooter({ text: "XJKER CM • server tools" })
+      .setFooter({ text: "XJKER CM | GIVEAWAYS • CHILL • HANGOUT" })
       .setTimestamp();
 
     const reply = await message.reply({ embeds: [promoEmbed] });
@@ -327,4 +384,4 @@ async function runPrefixCommand(client, message, input) {
   return true;
 }
 
-module.exports = { runPrefixCommand, ticketOwnerId, parseTicketTargets };
+module.exports = { runPrefixCommand, ticketOwnerId, parseTicketTargets, buildPersonalPromoRequestEmbed };

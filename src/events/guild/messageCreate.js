@@ -10,6 +10,20 @@ function shouldReactToEnter(content) {
   return Boolean(normalized && /\b(enter|entry|entering|press enter|hit enter|submit|send|join)\b/.test(normalized));
 }
 
+function isTicketChannelContext(channel, topic) {
+  const channelName = String(channel?.name || "");
+  const channelTopic = String(topic || "");
+  return /ticket/i.test(channelName) || /^ticket-owner:/i.test(channelTopic);
+}
+
+function isTicketFallbackEligible({ message, hasStaffRole, ticketOwnerId, previousCheckin, isTicketLikeChannel }) {
+  if (!message || !hasStaffRole || !isTicketLikeChannel) return false;
+  if (!message.channel || !message.member) return false;
+  if (message.author.id === ticketOwnerId) return false;
+  if (previousCheckin) return false;
+  return true;
+}
+
 function isGiveawayEntryMessage(content) {
   const normalized = String(content || "").trim().toLowerCase();
   return /^(?:enter|join)(?:\s+giveaway)?$/i.test(normalized);
@@ -32,6 +46,8 @@ async function processGiveawayEntry(client, message) {
 module.exports = {
   shouldReactToEnter,
   isGiveawayEntryMessage,
+  isTicketChannelContext,
+  isTicketFallbackEligible,
   name: Events.MessageCreate,
   once: false,
   async execute(client, message) {
@@ -53,22 +69,28 @@ module.exports = {
 
     const ticketTopic = message.channel.topic || "";
     const ticketOwnerId = ticketTopic.match(/^ticket-owner:(\d+)$/)?.[1];
-    const isTicketLikeChannel = /ticket/i.test(message.channel.name || "");
+    const isTicketLikeChannel = isTicketChannelContext(message.channel, ticketTopic);
     const configuredStaffRoleIds = settings.tickets?.staffRoleIds?.length ? settings.tickets.staffRoleIds : (settings.tickets?.staffRoleId ? [settings.tickets.staffRoleId] : []);
     const staffRoleIds = [...new Set([DEFAULT_STAFF_ROLE_ID, ...configuredStaffRoleIds.filter(Boolean)])];
     const memberStaffRoleId = staffRoleIds.find((roleId) => message.member?.roles?.cache?.has(roleId));
     const hasStaffRole = message.member && (message.member.permissions.has(PermissionFlagsBits.ManageChannels) || Boolean(memberStaffRoleId));
     const promotionState = settings.promotion || { checkins: {}, ticketTotals: {} };
     const previousCheckin = promotionState.checkins?.[message.channel.id];
-    const shouldCountFallback = hasStaffRole && !previousCheckin && (message.author.id !== ticketOwnerId || (isTicketLikeChannel && !ticketOwnerId));
+    const shouldCountFallback = isTicketFallbackEligible({
+      message,
+      hasStaffRole,
+      ticketOwnerId,
+      previousCheckin,
+      isTicketLikeChannel,
+    });
 
-    if ((ticketOwnerId && hasStaffRole && message.author.id !== ticketOwnerId) || shouldCountFallback) {
+    if (shouldCountFallback) {
       const nextState = getCheckinState({
         ...promotionState,
         staffMembers: new Set(promotionState.staffMembers || []),
       }, { userId: message.author.id, roleId: memberStaffRoleId || DEFAULT_STAFF_ROLE_ID }, message.channel.id);
 
-      if (!previousCheckin && nextState.checkins?.[message.channel.id] === message.author.id) {
+      if (nextState.checkins?.[message.channel.id] === message.author.id) {
         client.db.updateGuildSettings(message.guild.id, (currentGuildSettings) => {
           const existingPromotion = currentGuildSettings.promotion || { checkins: {}, ticketTotals: {} };
           return {
@@ -77,24 +99,28 @@ module.exports = {
               ...existingPromotion,
               checkins: {
                 ...(existingPromotion.checkins || {}),
-                ...nextState.checkins
+                ...nextState.checkins,
               },
               ticketTotals: {
                 ...(existingPromotion.ticketTotals || {}),
-                ...nextState.ticketTotals
-              }
-            }
+                ...nextState.ticketTotals,
+              },
+            },
           };
         });
+
         client.db.updateMetric(message.guild.id, message.author.id, "tickets", 1);
         const day = new Date().toISOString().slice(0, 10);
         client.db.updateMetric(message.guild.id, `${message.author.id}:${day}`, "tickets", 1);
+
         const updatedGuildSettings = client.db.getGuildSettings(message.guild.id);
         const currentCount = updatedGuildSettings.promotion?.ticketTotals?.[message.author.id] || 1;
+
         const confirmation = await message.reply({
           content: `${message.author} got check-in. This ticket is now counted for your check-ins (${currentCount}).`,
           allowedMentions: { repliedUser: false },
         }).catch(() => null);
+
         if (confirmation) setTimeout(() => confirmation.delete().catch(() => {}), 1000);
       }
     }
@@ -139,12 +165,12 @@ module.exports = {
         : message.channel;
       const avatarUrl = message.author.displayAvatarURL({ size: 256, extension: "png" });
       const levelEmbed = new EmbedBuilder()
-        .setColor(0x2b2d31)
-        .setAuthor({ name: `${message.author.username.toUpperCase()} ON TOP`, iconURL: avatarUrl })
+        .setColor(0x0f172a)
+        .setAuthor({ name: "🏆 XJKER CM | MANAGEMENT TOOLS" })
         .setTitle("LEVEL-UP!")
         .setDescription(`**${previousLevel + 1} • ${nextLevelInfo.level}**`)
         .setThumbnail(avatarUrl)
-        .setFooter({ text: "Eagle Premium • leveling" })
+        .setFooter({ text: "XJKER CM | GIVEAWAYS • CHILL • HANGOUT" })
         .setTimestamp();
       if (announcementChannel?.isTextBased()) {
         await announcementChannel.send({ embeds: [levelEmbed] }).catch(() => {});

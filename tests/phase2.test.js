@@ -2,7 +2,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { render } = require('../src/welcome');
 const { clearAfk, setAfk } = require('../src/afk');
-const { evaluatePromoDemo, getCheckinState, getCheckinLeaderboard, registerTicketCheckin } = require('../src/services/promoDemoService');
+const { evaluatePromoDemo, getCheckinState, getCheckinLeaderboard, registerTicketCheckin, getRoleTarget } = require('../src/services/promoDemoService');
+const { buildPersonalPromoRequestEmbed } = require('../src/services/prefixCommandService');
 
 test('disablegoodbye resolves the shared embed utility', () => {
   const command = require('../src/commands/configuration/disablegoodbye');
@@ -28,6 +29,26 @@ test('promo demo awards promotion when both metrics clear 50% of the target', ()
   assert.equal(result.status, 'promo');
   assert.equal(result.messagesPercent, 60);
   assert.equal(result.ticketsPercent, 50);
+});
+
+test('promoreq builds a personal promo-progress embed using the author metrics and active role target', () => {
+  const member = {
+    id: 'u-99',
+    user: { id: 'u-99', username: 'xjker' },
+    roles: { cache: [{ id: 'r-trial', name: 'Trial Staff' }] },
+  };
+  const guild = { id: 'g-1', name: 'XJKER CM' };
+  const metrics = { messages: 600, tickets: 5 };
+  const target = getRoleTarget(member);
+  const result = buildPersonalPromoRequestEmbed(guild, member, metrics);
+
+  assert.equal(target.role, 'Trial Staff');
+  assert.equal(result.data.title, '❤️ XJKER CM Promo-demo ❤️');
+  assert.match(result.data.description, /@Trial Staff/);
+  assert.match(result.data.fields[0].value, /Your Progress/);
+  assert.match(result.data.fields[0].value, /600\/700/);
+  assert.match(result.data.fields[1].value, /Current Est. Verdict/);
+  assert.match(result.data.fields[2].value, /Promotion/);
 });
 
 test('first staff check-in records a ticket and marks the member as checked in', () => {
