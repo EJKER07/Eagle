@@ -4,6 +4,8 @@ const { embed } = require("../../utils/embeds");
 const { createTranscript } = require("discord-html-transcripts");
 const { activeEmbed } = require("../../services/giveawayService");
 
+const DEFAULT_STAFF_ROLE_ID = "1534099901976416257";
+
 module.exports = {
   name: Events.InteractionCreate,
   once: false,
@@ -16,7 +18,8 @@ module.exports = {
       try {
         await interaction.deferReply({ ephemeral: true });
         const rawSettings = client.db.getGuildSettings(interaction.guildId).tickets;
-        const roleIds = rawSettings.staffRoleIds?.length ? rawSettings.staffRoleIds : (rawSettings.staffRoleId ? [rawSettings.staffRoleId] : []);
+        const configuredRoleIds = rawSettings.staffRoleIds?.length ? rawSettings.staffRoleIds : (rawSettings.staffRoleId ? [rawSettings.staffRoleId] : []);
+        const roleIds = [...new Set([DEFAULT_STAFF_ROLE_ID, ...configuredRoleIds.filter(Boolean)])];
         const settings = {
           ...rawSettings,
           enabled: rawSettings.enabled || roleIds.length > 0,
@@ -56,7 +59,7 @@ module.exports = {
           new ButtonBuilder().setCustomId("ticket:claim").setLabel("Claim Ticket").setStyle(ButtonStyle.Primary).setEmoji("🎟️"),
           new ButtonBuilder().setCustomId("ticket:close").setLabel("Close Ticket").setStyle(ButtonStyle.Danger).setEmoji("🔒"),
         );
-        await channel.send({ content: `${interaction.user}${staffRoleIds.map((id) => ` <@&${id}>`).join("")}`, embeds: [ticketEmbed], components: [ticketButtons], allowedMentions: { users: [interaction.user.id], roles: staffRoleIds } });
+        await channel.send({ content: `${interaction.user}${settings.staffRoleIds.map((id) => ` <@&${id}>`).join("")}`, embeds: [ticketEmbed], components: [ticketButtons], allowedMentions: { users: [interaction.user.id], roles: settings.staffRoleIds } });
         await interaction.editReply({ embeds: [embed("success", "Ticket created", `Your private ticket is ${channel}.`)] });
       } catch (error) {
         console.error("Ticket creation error:", error);
