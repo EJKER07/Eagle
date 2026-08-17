@@ -23,7 +23,7 @@ module.exports = {
           staffRoleIds: roleIds,
         };
         if (!settings.enabled) {
-          return interaction.editReply({ embeds: [embed("error", "Tickets disabled", "Tickets are disabled in this server.")] });
+          return interaction.editReply({ embeds: [embed("error", "Tickets disabled", `Tickets are disabled in this server. Staff role ID required: ${roleIds.length ? roleIds.join(", ") : "not configured"}.`)] });
         }
         const existing = interaction.guild.channels.cache.find((channel) => channel.topic === `ticket-owner:${interaction.user.id}`);
         if (existing) {
