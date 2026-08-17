@@ -3,7 +3,7 @@ const { REST, Routes } = require("discord.js");
 const MAX_SLASH_COMMANDS = 100;
 const slashPriority = [
   "help", "ping", "serverinfo", "userinfo", "avatar", "botinfo", "membercount", "afk",
-  "setgreet", "testgreet", "disablegreet", "setup", "config", "automod", "antinuke",
+  "setgreet", "testgreet", "disablegreet", "setup", "config", "setroleping", "disableroleping", "automod", "antinuke",
   "ban", "kick", "timeout", "untimeout", "warn", "warnings", "clear", "lock", "unlock",
   "poll", "giveaway", "play", "queue", "skip", "stop", "balance", "daily", "rank",
   "invites", "messages", "lb", "vc", "gstart", "gend", "greroll", "setprefix",
