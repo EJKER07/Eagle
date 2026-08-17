@@ -1,7 +1,7 @@
-const { PermissionFlagsBits } = require("discord.js");
+const { PermissionFlagsBits, EmbedBuilder, Colors } = require("discord.js");
 const { createTranscript } = require("discord-html-transcripts");
 const { embed } = require("../utils/embeds");
-const { getPromotionReport, evaluatePromoDemo, sortReportRows } = require("./promoDemoService");
+const { getPromotionReport, evaluateRoleTarget, ROLE_TARGETS, getCheckinLeaderboard } = require("./promoDemoService");
 
 function tokenize(input) {
   return input.match(/(?:[^\s"]+|"[^"]*")+/g)?.map((token) => token.replace(/^"|"$/g, "")) || [];
@@ -23,6 +23,31 @@ function optionDefinitions(commandData, tokens) {
 function mentionId(value, prefix) {
   const match = value.match(new RegExp(`^<@!?${prefix ? "&" : ""}(\\d+)>$`));
   return match?.[1] || (/^\d+$/.test(value) ? value : null);
+}
+
+function getRoleMention(guild, roleName) {
+  const normalized = String(roleName || "").trim();
+  if (!normalized) return "@Unknown";
+  const match = guild?.roles?.cache?.find((role) => role.name.toLowerCase() === normalized.toLowerCase());
+  return match ? `<@&${match.id}>` : `@${normalized}`;
+}
+
+function getNextRoleName(currentRoleName, status) {
+  if (status === "demotion") return "Removed from staff";
+  const currentIndex = ROLE_TARGETS.findIndex((entry) => entry.role.toLowerCase() === String(currentRoleName || "").toLowerCase());
+  if (currentIndex === -1) return String(currentRoleName || "Current rank");
+  const nextIndex = Math.min(currentIndex + (status === "double-promotion" ? 2 : 1), ROLE_TARGETS.length - 1);
+  return ROLE_TARGETS[nextIndex].role;
+}
+
+function buildPromoLine(guild, row, member) {
+  const status = row.status || row.legacyStatus || "stay";
+  const currentRole = row.role || "Trial Staff";
+  const nextRoleName = getNextRoleName(currentRole, status);
+  const nextRoleText = status === "demotion" ? "Removed from staff" : getRoleMention(guild, nextRoleName);
+  const suffix = status === "double-promotion" ? " (x2 skip!)" : "";
+  const mention = member ? `<@${member.id}>` : `<@${row.userId}>`;
+  return `${mention} — ${row.messages}/${row.targetMessages ?? row.messages} msgs (${row.messagesPercent}%), ${row.tickets}/${row.targetTickets ?? row.tickets} tickets (${row.ticketsPercent}%) ➡️ ${nextRoleText}${suffix}`;
 }
 
 async function resolveOptionValue(definition, value, message) {
@@ -161,30 +186,76 @@ async function runPrefixCommand(client, message, input) {
   if (command === "ticket" || command === "tickets") {
     return message.reply({ embeds: [embed("ticket", "Ticket commands", "`$close` `$reopen` `$rename <name>` `$claim` `$add @user @role` `$remove @user @role` `$delete`\nUse these inside a ticket channel.")] });
   }
+  if (command === "checkinlb") {
+    const leaderboard = getCheckinLeaderboard(client.db.getGuildSettings(message.guild.id).promotion?.ticketTotals || {}, 10);
+    const title = `🏆 Check-in Leaderboard — ${message.guild.name}`;
+    if (!leaderboard.length) {
+      const emptyEmbed = new EmbedBuilder()
+        .setTitle(title)
+        .setDescription("No approved check-ins recorded yet.")
+        .setColor(Colors.Yellow)
+        .setTimestamp();
+      return message.reply({ embeds: [emptyEmbed] });
+    }
+
+    const medalMap = { 0: "🥇", 1: "🥈", 2: "🥉" };
+    const lines = leaderboard.map((entry, index) => {
+      const rank = medalMap[index] || `#${index + 1}`;
+      return `${rank} <@${entry.userId}> — ${entry.checkins} approved check-ins`;
+    }).join("\n");
+
+    const leaderboardEmbed = new EmbedBuilder()
+      .setTitle(title)
+      .setDescription(lines)
+      .setColor(Colors.Gold)
+      .setTimestamp();
+
+    return message.reply({ embeds: [leaderboardEmbed] });
+  }
   if (["promodemo", "promo", "checkin"].includes(command)) {
     const rangeInput = args.join(" ") || "17/8/26 to 24/8/26";
     const report = getPromotionReport(client, message.guild.id, rangeInput);
-    const rows = sortReportRows(report.rows, 1000, 6);
-    const byStatus = {
-      promo: rows.filter((row) => row.result.status === "promo"),
-      stay: rows.filter((row) => row.result.status === "stay"),
-      demote: rows.filter((row) => row.result.status === "demote"),
+    const diffDays = (report.end - report.start) / (1000 * 60 * 60 * 24);
+
+    if (diffDays > 7) {
+      const reply = await message.reply({ embeds: [embed("error", "Range too large", "❌ Evaluations can only be done under a 7-day range.")] });
+      setTimeout(() => reply.delete().catch(() => {}), 5000);
+      return true;
+    }
+
+    const evaluatedRows = report.rows.map((row) => {
+      const member = message.guild.members.cache.get(row.userId) || null;
+      const result = evaluateRoleTarget(row, member);
+      return { ...row, ...result };
+    });
+
+    const grouped = {
+      promotions: evaluatedRows.filter((row) => ["promotion", "promo", "double-promotion", "double-promo"].includes(row.status || row.legacyStatus)),
+      stay: evaluatedRows.filter((row) => ["stay"].includes(row.status || row.legacyStatus)),
+      demotions: evaluatedRows.filter((row) => ["demotion", "demote"].includes(row.status || row.legacyStatus)),
     };
 
-    const buildSection = (label, list, icon) => {
-      const lines = list.length ? list.slice(0, 5).map((row) => {
-        const result = row.result;
-        return `${icon} <@${row.userId}> — ${row.messages} msgs (${result.messagesPercent}%) | ${row.tickets} tickets (${result.ticketsPercent}%)`;
-      }).join("\n") : "No members in this section.";
-      return { name: `${icon} ${label} (${list.length})`, value: lines, inline: false };
+    const buildSection = (label, icon, rowsList) => {
+      const lines = rowsList.length
+        ? rowsList.slice(0, 10).map((row) => {
+            const member = message.guild.members.cache.get(row.userId) || null;
+            return `${icon} ${buildPromoLine(message.guild, row, member)}`;
+          }).join("\n")
+        : "No members in this section.";
+      return { name: `${icon} ${label} (${rowsList.length})`, value: lines, inline: false };
     };
 
-    const promoEmbed = embed("info", "Promotion / Demotion — Pending Confirmation", `Period: ${report.startText} — ${report.endText} • ${rows.length} member(s) evaluated`);
-    promoEmbed.addFields(
-      buildSection("Promotion", byStatus.promo, "✅"),
-      buildSection("Stay", byStatus.stay, "⚠️"),
-      buildSection("Demotion", byStatus.demote, "❌")
-    );
+    const promoEmbed = new EmbedBuilder()
+      .setTitle("XJKER CM • Staff Promotion Report")
+      .setDescription(`Period: ${report.startText} — ${report.endText} • ${evaluatedRows.length} member(s) evaluated`)
+      .setColor(Colors.Green)
+      .addFields(
+        buildSection("Promotions", "🟢", grouped.promotions),
+        buildSection("Stay", "⚠️", grouped.stay),
+        buildSection("Demotions", "❌", grouped.demotions)
+      )
+      .setFooter({ text: "XJKER CM • server tools" })
+      .setTimestamp();
 
     const reply = await message.reply({ embeds: [promoEmbed] });
     setTimeout(() => reply.delete().catch(() => {}), 15000);

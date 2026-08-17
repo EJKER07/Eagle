@@ -1,5 +1,14 @@
 const DEFAULT_STAFF_ROLE_ID = "1534099901976416257";
 
+const ROLE_TARGETS = [
+  { role: "Trial Staff", messages: 700, tickets: 10 },
+  { role: "Staff", messages: 1000, tickets: 12 },
+  { role: "Trial Mod", messages: 1500, tickets: 14 },
+  { role: "Mod", messages: 2000, tickets: 16 },
+  { role: "Trial Admin", messages: 2500, tickets: 18 },
+  { role: "Other Higher Role", messages: 3000, tickets: 20 },
+];
+
 function parseDateValue(raw) {
   const value = String(raw || "").trim();
   if (!value) throw new Error("Please provide a valid date like 17/8/26.");
@@ -37,6 +46,13 @@ function parseDateRange(input) {
   return { start: rangeStart, end: rangeEnd, startText: formatDate(rangeStart), endText: formatDate(rangeEnd) };
 }
 
+function getRoleTarget(member) {
+  if (!member || !member.roles || !member.roles.cache) return ROLE_TARGETS[0];
+  const matches = ROLE_TARGETS.filter((entry) => member.roles.cache.some((role) => role && role.name === entry.role));
+  if (!matches.length) return ROLE_TARGETS[0];
+  return matches.reduce((best, current) => (current.messages > best.messages ? current : best), matches[0]);
+}
+
 function evaluatePromoDemo(metrics, target = { requiredMessages: 1000, requiredTickets: 6 }) {
   const messages = Number(metrics.messages || 0);
   const tickets = Number(metrics.tickets || 0);
@@ -45,11 +61,10 @@ function evaluatePromoDemo(metrics, target = { requiredMessages: 1000, requiredT
   const messagesPercent = requiredMessages > 0 ? Math.min(200, Math.round((messages / requiredMessages) * 100)) : 0;
   const ticketsPercent = requiredTickets > 0 ? Math.min(200, Math.round((tickets / requiredTickets) * 100)) : 0;
 
-  let status = "stay";
+  let status = "demote";
   if (messagesPercent >= 200 || ticketsPercent >= 200) status = "double-promo";
   else if (messagesPercent >= 100 || ticketsPercent >= 100 || (messagesPercent >= 50 && ticketsPercent >= 50)) status = "promo";
   else if (messagesPercent >= 50 || ticketsPercent >= 50) status = "stay";
-  else status = "demote";
 
   return {
     status,
@@ -59,6 +74,33 @@ function evaluatePromoDemo(metrics, target = { requiredMessages: 1000, requiredT
     requiredTickets,
     messagesPercent,
     ticketsPercent,
+  };
+}
+
+function evaluateRoleTarget(metrics, member) {
+  const target = getRoleTarget(member);
+  const result = evaluatePromoDemo(metrics, { requiredMessages: target.messages, requiredTickets: target.tickets });
+  const statusMap = {
+    "double-promo": "✨ DOUBLE PROMOTION (Skip Rank) 🎉",
+    promo: "✅ PROMOTION",
+    stay: "⚠️ STAY",
+    demote: "❌ DEMOTION",
+  };
+  const canonicalStatus = {
+    "double-promo": "double-promotion",
+    promo: "promotion",
+    stay: "stay",
+    demote: "demotion",
+  }[result.status] || "stay";
+
+  return {
+    ...result,
+    status: canonicalStatus,
+    legacyStatus: result.status,
+    targetMessages: target.messages,
+    targetTickets: target.tickets,
+    role: target.role,
+    verdict: statusMap[result.status] || "⚠️ STAY",
   };
 }
 
@@ -81,7 +123,7 @@ function getCheckinState(state = {}, actor, channelId) {
   if (!actor || !channelId) return next;
 
   const roleId = String(actor.roleId || "");
-  if (roleId !== DEFAULT_STAFF_ROLE_ID) return next;
+  if (!roleId) return next;
 
   if (!next.checkins[channelId]) {
     next.checkins[channelId] = actor.userId;
@@ -90,6 +132,14 @@ function getCheckinState(state = {}, actor, channelId) {
   }
 
   return next;
+}
+
+function getCheckinLeaderboard(ticketTotals = {}, limit = 10) {
+  return Object.entries(ticketTotals || {})
+    .filter(([userId, count]) => userId && Number(count) > 0)
+    .map(([userId, count]) => ({ userId, checkins: Number(count) || 0 }))
+    .sort((a, b) => b.checkins - a.checkins || a.userId.localeCompare(b.userId))
+    .slice(0, limit);
 }
 
 function sumMetricForRange(guildMembers = {}, metricName, startDate, endDate) {
@@ -141,12 +191,17 @@ function getPromotionReport(client, guildId, rangeText) {
 
 module.exports = {
   DEFAULT_STAFF_ROLE_ID,
+  ROLE_TARGETS,
+  getRoleTarget,
   parseDateValue,
   parseDateRange,
   formatDate,
   dateKey,
   evaluatePromoDemo,
+  evaluateRoleTarget,
+  sortReportRows,
   getCheckinState,
+  getCheckinLeaderboard,
   sumMetricForRange,
   getPromotionReport,
 };
